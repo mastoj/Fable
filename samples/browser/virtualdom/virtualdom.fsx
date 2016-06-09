@@ -18,17 +18,37 @@ open Fable.Import.Browser
 type Style =
   { border : string }
 
-let [<Import("default","virtual-dom/h")>] h(arg1: string, arg2: obj, arg3: obj[]): obj = failwith "JS only"
-let [<Import("default","virtual-dom/diff")>] diff:obj = failwith "JS only"
-let [<Import("default","virtual-dom/patch")>] patch:obj = failwith "JS only"
-let [<Import("default","virtual-dom/create-element")>] createElement:obj -> Node = failwith "JS only"
+let failwithjs() = failwith "JS only"
+
+let [<Import("default","virtual-dom/h")>] h(arg1: string, arg2: obj, arg3: obj[]): obj = failwithjs()
+let [<Import("default","virtual-dom/diff")>] diff:(obj*obj) -> obj = failwithjs()
+let [<Import("default","virtual-dom/patch")>] patch:(obj*obj) -> Node = failwithjs()
+let [<Import("default","virtual-dom/create-element")>] createElement:obj -> Node = failwithjs()
+
+[<Emit("String($0)")>]
+let String i = failwithjs
 
 let hello (count) =
-  h("div", createObj [ "style" ==> { border = "1px solid red" } ], [| string count |])
+  h("div", createObj [ "style" ==> { border = "1px solid red" } ], [| String count |])
 
-let tree = hello 42
-let rootNode= createElement tree
+let mutable tree = hello 45
+let mutable rootNode= createElement tree
 document.body.appendChild(rootNode)
+
+let newTree = hello 49
+let patches = diff(tree, newTree)
+patch(rootNode, patches)
+
+let mutable cnt = 42
+let counter() =
+    cnt <- cnt + 1
+    let newTree = hello(cnt)
+    let patches = diff(tree, newTree)
+    rootNode <- patch(rootNode, patches)
+    tree <- newTree
+
+window.setInterval (counter,1000)
+
 
 
 (*
