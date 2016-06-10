@@ -77,34 +77,82 @@ module VDom =
 
     let div attrs children = Element(("div", attrs), children)
 
-let hello (count) =
+type AppState<'TModel, 'TMessage> = { Model: 'TModel; View: 'TModel -> ('TMessage -> unit) -> Html.Node; Update: 'TMessage -> 'TModel -> 'TModel}
+
+type App<'TModel, 'TMessage> = {AppState: AppState<'TModel, 'TMessage>; Node: Node option; CurrentTree: obj option}
+
+type Action =
+    | Increment
+    | Decrement
+
+let start app =
+    let createTree view model handler =
+        view model handler
+        |> VDom.render
+
+    MailboxProcessor.Start(fun inbox ->
+        let rec loop state =
+            async {
+                match state.Node, state.CurrentTree with
+                | None,_ ->
+                    let tree = createTree state.AppState.View state.AppState.Model inbox.Post
+                    let rootNode = createElement tree
+                    document.body.appendChild(rootNode) |> ignore
+                    return! loop {state with CurrentTree = Some tree; Node = Some rootNode}
+                | Some rootNode, Some currentTree ->
+                    let! message = inbox.Receive()
+                    let model' = state.AppState.Update message state.AppState.Model
+                    let tree = createTree state.AppState.View model' inbox.Post
+                    let patches = diff(currentTree, tree)
+                    patch(rootNode, patches) |> ignore
+                    return! loop {state with AppState = {state.AppState with Model = model'}; CurrentTree = Some tree}
+                | _ -> failwith "Shouldn't happen"
+            }
+        loop {AppState = app; Node = None; CurrentTree = None})
+
+let view m handler =
+    VDom.div
+        [
+            Html.Style {border = "1px solid red"}
+            Html.Handler ("onclick",(fun() -> handler Increment))
+        ]
+        [Html.Text (string m)]
+
+let update msg model =
+    match msg with
+    | Increment -> model + 1
+    | Decrement -> model - 1
+
+let hello (model) =
     VDom.div
         [
             Html.Style {border = "1px solid red"}
             Html.Handler ("onclick",(fun() -> window.alert("Clicked") |> ignore))
         ]
-        [Html.Text (string count)]
+        [Html.Text (string model)]
     |> VDom.render
+
+start {Model = 0; View = view; Update = update}
 //  h("div", createObj [ "style" ==> { border = "1px solid red" } ], [| String count |])
 
-let mutable tree = hello 45
-let mutable rootNode= createElement tree
-document.body.appendChild(rootNode)
-
-let newTree = hello 49
-let patches = diff(tree, newTree)
-patch(rootNode, patches)
-
-let mutable cnt = 42
-let counter() =
-    cnt <- cnt + 1
-    let newTree = hello(cnt)
-    let patches = diff(tree, newTree)
-    rootNode <- patch(rootNode, patches)
-    tree <- newTree
-
-window.setInterval (counter,1000)
-
+//let mutable tree = hello 45
+//let mutable rootNode= createElement tree
+//document.body.appendChild(rootNode)
+//
+//let newTree = hello 49
+//let patches = diff(tree, newTree)
+//patch(rootNode, patches)
+//
+//let mutable cnt = 42
+//let counter() =
+//    cnt <- cnt + 1
+//    let newTree = hello(cnt)
+//    let patches = diff(tree, newTree)
+//    rootNode <- patch(rootNode, patches)
+//    tree <- newTree
+//
+//window.setInterval (counter,1000)
+//
 
 
 (*
