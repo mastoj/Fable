@@ -15,21 +15,77 @@
 open Fable.Core
 open Fable.Import.Browser
 
-type Style =
-  { border : string }
+
+module Html =
+//    type Attribute = string * string
+
+    type Handler = unit -> unit
+    type Style =
+        { border : string }
+    type KeyValue = string*string
+
+    type Attribute =
+    | Handler of string*Handler
+    | Style of Style
+    | KeyValue of KeyValue
+
+    type Element = string * Attribute list
+    /// A Node in Html have the following forms
+    type Node =
+    /// A regular html element that can contain a list of other nodes
+    | Element of Element * Node list
+    /// A void element is one that can't have content, like link, br, hr, meta
+    /// See: https://dev.w3.org/html5/html-author/#void
+    | VoidElement of Element
+    /// A text value for a node
+    | Text of string
+    /// Whitespace for formatting
+    | WhiteSpace of string
 
 let failwithjs() = failwith "JS only"
-
 let [<Import("default","virtual-dom/h")>] h(arg1: string, arg2: obj, arg3: obj[]): obj = failwithjs()
-let [<Import("default","virtual-dom/diff")>] diff:(obj*obj) -> obj = failwithjs()
-let [<Import("default","virtual-dom/patch")>] patch:(obj*obj) -> Node = failwithjs()
+let [<Import("default","virtual-dom/diff")>] diff(arg1:obj, arg2:obj): obj = failwithjs()
+let [<Import("default","virtual-dom/patch")>] patch(arg1:obj, arg2:obj): Node = failwithjs()
 let [<Import("default","virtual-dom/create-element")>] createElement:obj -> Node = failwithjs()
 
 [<Emit("String($0)")>]
-let String i = failwithjs
+let String i :obj= failwith "JS only"
+
+module VDom =
+    open Html
+
+    let rec render node =
+
+        let toAttrs attrs =
+            attrs
+            |> List.map (function
+                    | Handler (evt,handler) -> evt, handler :> obj
+                    | Style style -> "style", (style :> obj)
+                    | KeyValue (key, value) -> key,(value :> obj)
+                )
+            |> createObj
+
+        match node with
+        | Element((tag,attrs), nodes) ->
+            let hAttrs = attrs |> toAttrs
+            let children = nodes |> List.map render |> Array.ofList
+            h(tag, hAttrs, children)
+
+        | VoidElement el -> String ""
+        | Text str -> String str
+        | WhiteSpace str -> String str
+
+    let div attrs children = Element(("div", attrs), children)
 
 let hello (count) =
-  h("div", createObj [ "style" ==> { border = "1px solid red" } ], [| String count |])
+    VDom.div
+        [
+            Html.Style {border = "1px solid red"}
+            Html.Handler ("onclick",(fun() -> window.alert("Clicked") |> ignore))
+        ]
+        [Html.Text (string count)]
+    |> VDom.render
+//  h("div", createObj [ "style" ==> { border = "1px solid red" } ], [| String count |])
 
 let mutable tree = hello 45
 let mutable rootNode= createElement tree
