@@ -110,8 +110,7 @@ module Html =
     type EventHandler =
         | MouseEventHandler of MouseEventHandler
 
-    type Style =
-        { border : string }
+    type Style = (string*string) []
 
     type KeyValue = string*string
 
@@ -122,16 +121,20 @@ module Html =
 
     type Element = string * Attribute list
     /// A Node in Html have the following forms
+    type VoidElement = string
     type Node =
     /// A regular html element that can contain a list of other nodes
     | Element of Element * Node list
     /// A void element is one that can't have content, like link, br, hr, meta
     /// See: https://dev.w3.org/html5/html-author/#void
-    | VoidElement of Element
+    | VoidElement of VoidElement
     /// A text value for a node
     | Text of string
     /// Whitespace for formatting
     | WhiteSpace of string
+
+    let div attrs children = Element(("div", attrs), children)
+    let text s = Text s
 
     let mouseClick f =
         EventHandler (MouseEventHandler (OnClick f))
@@ -150,12 +153,14 @@ let String i :obj= failwith "JS only"
 [<Emit("x + y")>]
 let something x y = failwith "JS only"
 
+[<Emit("$1.join($0)")>]
+let join sep strs = failwith "JS only"
+
+
 module VDom =
     open Html
 
     let rec render node =
-        printfn "%A" node
-
         let renderMouseEventHandler = function
             | OnClick h -> "onclick", (h :> obj)
 
@@ -166,7 +171,7 @@ module VDom =
             attrs
             |> List.map (function
                     | EventHandler handler -> handler |> renderHandler
-                    | Style style -> "style", (style :> obj)
+                    | Style style -> "style", ((style |> Array.map (fun (k,v) -> k + ":" + v) |> join ";") :> obj)
                     | KeyValue (key, value) -> key,(value :> obj)
                 )
             |> createObj
@@ -174,14 +179,13 @@ module VDom =
         match node with
         | Element((tag,attrs), nodes) ->
             let hAttrs = attrs |> toAttrs
-            let children = nodes |> List.map render |> Array.ofList
+            let children = nodes |> List.map render |> List.toArray
+            printfn "Debug here"
             h(tag, hAttrs, children)
 
-        | VoidElement el -> String ""
+        | VoidElement el -> h(el, [], [||])
         | Text str -> String str
         | WhiteSpace str -> String str
-
-    let div attrs children = Element(("div", attrs), children)
 
 type AppState<'TModel, 'TMessage> = {
         Model: 'TModel;
@@ -193,24 +197,6 @@ type Observer<'T>(next, error, completed) =
         member x.OnCompleted() = completed()
         member x.OnError(e) = error e
         member x.OnNext(v) = next v
-
-type Microsoft.FSharp.Control.Async with
-  /// Returns an asynchronous workflow that waits for the first
-  /// occurrence of the specified event & then unsubscribes
-  static member AwaitObservable (obs:System.IObservable<'T>) =
-    Async.FromContinuations(fun (cont, econt, ccont) ->
-        let disp : ref<option<System.IDisposable>> = ref None
-        let onNext v =
-          disp.Value.Value.Dispose()
-          cont(v)
-        let onError e =
-          disp.Value.Value.Dispose()
-          econt(e)
-        let onComplete () =
-          disp.Value.Value.Dispose()
-          ccont (unbox (System.Exception("Observable stream ended.")))
-        disp := obs.Subscribe(Observer(onNext, onError, onComplete)) |> Some)
-
 
 type App<'TModel, 'TMessage> = {AppState: AppState<'TModel, 'TMessage>; Node: Node option; CurrentTree: obj option}
 
@@ -243,39 +229,17 @@ let start app =
             }
         loop {AppState = app; Node = None; CurrentTree = None})
 
-
-//    let inbox = new Event<Action>()
-//
-//    let rec loop state =
-//        async {
-//            match state.Node, state.CurrentTree with
-//            | None,_ ->
-//                let tree = createTree state.AppState.View state.AppState.Model inbox.Trigger
-//                let rootNode = createElement tree
-//                document.body.appendChild(rootNode) |> ignore
-//                return! loop {state with CurrentTree = Some tree; Node = Some rootNode}
-//
-//            | Some rootNode, Some currentTree ->
-//                let! message = inbox.Publish |> Async.AwaitObservable
-//                let model' = state.AppState.Update message state.AppState.Model
-//                let tree = createTree state.AppState.View model' inbox.Trigger
-//                let patches = diff(currentTree, tree)
-//                patch(rootNode, patches) |> ignore
-//                return! loop {state with AppState = {state.AppState with Model = model'}; CurrentTree = Some tree}
-//            | _ -> failwith "Shouldn't happen"
-//        }
-//    loop {AppState = app; Node = None; CurrentTree = None}
-
 open VDom
+open Html
 let view m handler =
     div
         [
-            Html.Style {border = "1px solid red"}
+            Html.Style [|"border","1px solid red"|]
         ]
         [
-            div [Html.Style { border = "1px solid blue"}; Html.mouseClick (fun x -> window.alert((x.screenX, x.screenY):> obj); handler Increment)] [Html.Text (string "Increment")]
-            Html.Text (string m)
-            div [Html.Style { border = "1px solid green"}; Html.mouseClick (fun x -> window.alert((x.screenX, x.screenY):> obj); handler Decrement)] [Html.Text (string "Decrement")]
+            div [Html.Style [|"border","1px solid blue"|]; Html.mouseClick (fun x -> handler Increment)] [Html.Text (string "Increment")]
+            text (string m)
+            div [Html.Style [|"border", "1px solid green"; "height", ((string (70+m)) + "px")|]; Html.mouseClick (fun x -> handler Decrement)] [Html.Text (string "Decrement")]
         ]
 
 let update msg model =
@@ -284,66 +248,3 @@ let update msg model =
     | Decrement -> model - 1
 
 start {Model = 0; View = view; Update = update}
-
-//let hello (model) =
-//    VDom.div
-//        [
-//            Html.Style {border = "1px solid red"}
-//            Html.Handler ("onclick",(fun() -> window.alert("Clicked") |> ignore))
-//        ]
-//        [Html.Text (string model)]
-//    |> VDom.render
-
-//  h("div", createObj [ "style" ==> { border = "1px solid red" } ], [| String count |])
-
-//let mutable tree = hello 45
-//let mutable rootNode= createElement tree
-//document.body.appendChild(rootNode)
-//
-//let newTree = hello 49
-//let patches = diff(tree, newTree)
-//patch(rootNode, patches)
-//
-//let mutable cnt = 42
-//let counter() =
-//    cnt <- cnt + 1
-//    let newTree = hello(cnt)
-//    let patches = diff(tree, newTree)
-//    rootNode <- patch(rootNode, patches)
-//    tree <- newTree
-//
-//window.setInterval (counter,1000)
-//
-
-
-(*
-// 1: Create a function that declares what the DOM should look like
-function render(count)  {
-    return h('div', {
-        style: {
-            textAlign: 'center',
-            lineHeight: (100 + count) + 'px',
-            border: '1px solid red',
-            width: (100 + count) + 'px',
-            height: (100 + count) + 'px'
-        }
-    }, [String(count)]);
-}
-
-// 2: Initialise the document
-var count = 0;      // We need some app data. Here we just store a count.
-
-var tree = render(count);               // We need an initial tree
-var rootNode = createElement(tree);     // Create an initial root DOM node ...
-document.body.appendChild(rootNode);    // ... and it should be in the document
-
-// 3: Wire up the update logic
-setInterval(function () {
-      count++;
-
-      var newTree = render(count);
-      var patches = diff(tree, newTree);
-      rootNode = patch(rootNode, patches);
-      tree = newTree;
-}, 1000);
-*)
