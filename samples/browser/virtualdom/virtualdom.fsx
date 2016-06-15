@@ -12,6 +12,7 @@
 *)
 (*** hide ***)
 #r "node_modules/fable-core/Fable.Core.dll"
+#load "html.fsx"
 open Fable.Core
 //open Fable.Import.Browser
 
@@ -94,57 +95,6 @@ type MailboxProcessor<'T>(body) =
         messages.Add(msg)
         processEvents ()
 
-module Html =
-//    type Attribute = string * string
-
-    type MouseEvent =
-        {
-            altKey: bool
-            screenX: int
-            screenY: int
-        }
-
-    type MouseEventHandler =
-        | OnClick of (MouseEvent -> unit)
-
-    type EventHandler =
-        | MouseEventHandler of MouseEventHandler
-
-    type Style =
-        {
-            border: string option
-            height: string option
-        }
-    let defaultStyle = { border = None; height = None } // height = None}
-
-    type KeyValue = string*string
-
-    type Attribute =
-    | EventHandler of EventHandler
-    | Style of Style
-    | KeyValue of KeyValue
-
-    type Element = string * Attribute list
-    /// A Node in Html have the following forms
-    type VoidElement = string
-    type Node =
-    /// A regular html element that can contain a list of other nodes
-    | Element of Element * Node list
-    /// A void element is one that can't have content, like link, br, hr, meta
-    /// See: https://dev.w3.org/html5/html-author/#void
-    | VoidElement of VoidElement
-    /// A text value for a node
-    | Text of string
-    /// Whitespace for formatting
-    | WhiteSpace of string
-
-    let div attrs children = Element(("div", attrs), children)
-    let text s = Text s
-
-    let mouseClick f =
-        EventHandler (MouseEventHandler (OnClick f))
-
-
 open Fable.Import.Browser
 let failwithjs() = failwith "JS only"
 let [<Import("default","virtual-dom/h")>] h(arg1: string, arg2: obj, arg3: obj[]): obj = failwithjs()
@@ -157,6 +107,10 @@ let String i :obj= failwith "JS only"
 
 [<Emit("x + y")>]
 let something x y = failwith "JS only"
+
+[<Emit("$1.join($0)")>]
+let join sep strs = failwith "JS only"
+
 
 module VDom =
     open Html
@@ -172,7 +126,7 @@ module VDom =
             attrs
             |> List.map (function
                     | EventHandler handler -> handler |> renderHandler
-                    | Style style -> printfn "%A" (style :> obj); "style", (style :> obj)
+                    | Style style -> "style", ((style |> Array.map (fun (k,v) -> k + ":" + v) |> join ";") :> obj)
                     | KeyValue (key, value) -> key,(value :> obj)
                 )
             |> createObj
@@ -184,7 +138,9 @@ module VDom =
             printfn "Debug here"
             h(tag, hAttrs, children)
 
-        | VoidElement el -> h(el, [], [||])
+        | VoidElement (tag, attrs) ->
+            let hAttrs = attrs |> toAttrs
+            h(tag, hAttrs, [||])
         | Text str -> String str
         | WhiteSpace str -> String str
 
@@ -235,12 +191,16 @@ open Html
 let view m handler =
     div
         [
-            Html.Style {defaultStyle with border = Some "1px solid red"}
+            Style [|"border","1px solid red"|]
         ]
         [
-            div [Html.Style {defaultStyle with  border = Some "1px solid blue"}; Html.mouseClick (fun x -> handler Increment)] [Html.Text (string "Increment")]
+            div [Style [|"border","1px solid blue"|]; mouseClick (fun x -> handler Increment)] [Html.Text (string "Increment")]
             text (string m)
-            div [Html.Style {defaultStyle with  border = Some "1px solid green"; height = Some ((string (70+m)) + "px")}; Html.mouseClick (fun x -> handler Decrement)] [Html.Text (string "Decrement")]
+            br []
+            span [] [text "Hello world"]
+            hr []
+            button [attribute "name" "Click me"] [text "Click me"]
+            div [Html.Style [|"border", "1px solid green"; "height", ((string (70+m)) + "px")|]; Html.mouseClick (fun x -> handler Decrement)] [Html.Text (string "Decrement")]
         ]
 
 let update msg model =
