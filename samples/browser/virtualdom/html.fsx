@@ -1,193 +1,288 @@
-type MouseEvent =
-    {
-        altKey: bool
-        screenX: int
-        screenY: int
-    }
+[<AutoOpen>]
+module Types =
+    type MouseEvent =
+        {
+            altKey: bool
+            screenX: int
+            screenY: int
+        }
+    type KeyboardEvent =
+        {
+            code: string
+        }
 
-type MouseEventHandler = string*(MouseEvent -> unit)
+    type MouseEventHandler = string*(MouseEvent -> unit)
+    type KeyboardEventHandler = string*(KeyboardEvent -> unit)
+    type EventHandler = string*(obj -> unit)
 
-type EventHandler =
-    | MouseEventHandler of MouseEventHandler
+    type EventHandlerBinding =
+        | MouseEventHandler of MouseEventHandler
+        | KeyboardEventHandler of KeyboardEventHandler
+        | EventHandler of EventHandler
 
-type Style = (string*string) []
+    type Style = (string*string) []
 
-type KeyValue = string*string
+    type KeyValue = string*string
 
-type Attribute =
-| EventHandler of EventHandler
-| Style of Style
-| KeyValue of KeyValue
+    type Attribute =
+    | EventHandlerBinding of EventHandlerBinding
+    | Style of Style
+    | KeyValue of KeyValue
 
-type Element = string * Attribute list
-/// A Node in Html have the following forms
-type VoidElement = string * Attribute list
-type Node =
-/// A regular html element that can contain a list of other nodes
-| Element of Element * Node list
-/// A void element is one that can't have content, like link, br, hr, meta
-/// See: https://dev.w3.org/html5/html-author/#void
-| VoidElement of VoidElement
-/// A text value for a node
-| Text of string
-/// Whitespace for formatting
-| WhiteSpace of string
+    type Element = string * Attribute list
+    /// A Node in Html have the following forms
+    type VoidElement = string * Attribute list
+    type Node =
+    /// A regular html element that can contain a list of other nodes
+    | Element of Element * Node list
+    /// A void element is one that can't have content, like link, br, hr, meta
+    /// See: https://dev.w3.org/html5/html-author/#void
+    | VoidElement of VoidElement
+    /// A text value for a node
+    | Text of string
+    /// Whitespace for formatting
+    | WhiteSpace of string
 
-let private createElem tagName attrs children = Element((tagName, attrs), children)
-let private createVoidElem tagName attrs = VoidElement(tagName, attrs)
+[<AutoOpen>]
+module Tags =
+    let elem tagName attrs children = Element((tagName, attrs), children)
+    let voidElem tagName attrs = VoidElement(tagName, attrs)
 
-// Elements - list of elements here: https://developer.mozilla.org/en-US/docs/Web/HTML/Element
-// Void elements
-let br = createVoidElem "br"
-let area = createVoidElem "area"
-let baseHtml = createVoidElem "base"
-let col = createVoidElem "col"
-let embed = createVoidElem "embed"
-let hr = createVoidElem "hr"
-let img = createVoidElem "img"
-let input = createVoidElem "input"
-let link = createVoidElem "link"
-let meta = createVoidElem "meta"
-let param = createVoidElem "param"
-let source = createVoidElem "source"
-let track = createVoidElem "track"
-let wbr = createVoidElem "wbr"
+    let whiteSpace = WhiteSpace
+    let text = Text
 
-// Metadata
-let head = createElem "head"
-let style = createElem "style"
-let title = createElem "title"
+    // Elements - list of elements here: https://developer.mozilla.org/en-US/docs/Web/HTML/Element
+    // Void elements
+    let br = voidElem "br"
+    let area = voidElem "area"
+    let baseHtml = voidElem "base"
+    let col = voidElem "col"
+    let embed = voidElem "embed"
+    let hr = voidElem "hr"
+    let img = voidElem "img"
+    let input = voidElem "input"
+    let link = voidElem "link"
+    let meta = voidElem "meta"
+    let param = voidElem "param"
+    let source = voidElem "source"
+    let track = voidElem "track"
+    let wbr = voidElem "wbr"
 
-// Content sectioning
-let address = createElem "address"
-let article = createElem "article"
-let aside = createElem "aside"
-let footer = createElem "footer"
-let header = createElem "header"
-let h1 = createElem "h1"
-let h2 = createElem "h2"
-let h3 = createElem "h3"
-let h4 = createElem "h4"
-let h5 = createElem "h5"
-let h6 = createElem "h6"
-let hgroup = createElem "hgroup"
-let nav = createElem "nav"
+    // Metadata
+    let head = elem "head"
+    let style = elem "style"
+    let title = elem "title"
 
-// Text content
-let dd = createElem "dd"
-let div = createElem "div"
-let dl = createElem "dl"
-let dt = createElem "dt"
-let figcaption = createElem "figcaption"
-let figure = createElem "figure"
-let li = createElem "li"
-let main = createElem "main"
-let ol = createElem "ol"
-let p = createElem "p"
-let pre = createElem "pre"
-let ul = createElem "ul"
+    // Content sectioning
+    let address = elem "address"
+    let article = elem "article"
+    let aside = elem "aside"
+    let footer = elem "footer"
+    let header = elem "header"
+    let h1 = elem "h1"
+    let h2 = elem "h2"
+    let h3 = elem "h3"
+    let h4 = elem "h4"
+    let h5 = elem "h5"
+    let h6 = elem "h6"
+    let hgroup = elem "hgroup"
+    let nav = elem "nav"
 
-// Inline text semantics
-let a = createElem "a"
-let abbr = createElem "abbr"
-let b = createElem "b"
-let bdi = createElem "bdi"
-let bdo = createElem "bdo"
-let cite = createElem "cite"
-let code = createElem "code"
-let data = createElem "data"
-let dfn = createElem "dfn"
-let em = createElem "em"
-let i = createElem "i"
-let kbd = createElem "kbd"
-let mark = createElem "mark"
-let q = createElem "q"
-let rp = createElem "rp"
-let rt = createElem "rt"
-let rtc = createElem "rtc"
-let ruby = createElem "ruby"
-let s = createElem "s"
-let samp = createElem "samp"
-let small = createElem "small"
-let span = createElem "span"
-let strong = createElem "strong"
-let sub = createElem "sub"
-let sup = createElem "sup"
-let time = createElem "time"
-let u = createElem "u"
-let var = createElem "var"
+    // Text content
+    let dd = elem "dd"
+    let div = elem "div"
+    let dl = elem "dl"
+    let dt = elem "dt"
+    let figcaption = elem "figcaption"
+    let figure = elem "figure"
+    let li = elem "li"
+    let main = elem "main"
+    let ol = elem "ol"
+    let p = elem "p"
+    let pre = elem "pre"
+    let ul = elem "ul"
 
-// Image and multimedia
-let audio = createElem "audio"
-let map = createElem "map"
-let video = createElem "video"
+    // Inline text semantics
+    let a = elem "a"
+    let abbr = elem "abbr"
+    let b = elem "b"
+    let bdi = elem "bdi"
+    let bdo = elem "bdo"
+    let cite = elem "cite"
+    let code = elem "code"
+    let data = elem "data"
+    let dfn = elem "dfn"
+    let em = elem "em"
+    let i = elem "i"
+    let kbd = elem "kbd"
+    let mark = elem "mark"
+    let q = elem "q"
+    let rp = elem "rp"
+    let rt = elem "rt"
+    let rtc = elem "rtc"
+    let ruby = elem "ruby"
+    let s = elem "s"
+    let samp = elem "samp"
+    let small = elem "small"
+    let span = elem "span"
+    let strong = elem "strong"
+    let sub = elem "sub"
+    let sup = elem "sup"
+    let time = elem "time"
+    let u = elem "u"
+    let var = elem "var"
 
-// Embedded content
-let objectHtml = createElem "object"
+    // Image and multimedia
+    let audio = elem "audio"
+    let map = elem "map"
+    let video = elem "video"
 
-// Demarcasting edits
-let del = createElem "del"
-let ins = createElem "ins"
+    // Embedded content
+    let objectHtml = elem "object"
 
-// Table content
-let caption = createElem "caption"
-let colgroup = createElem "colgroup"
-let table = createElem "table"
-let tbody = createElem "tbody"
-let td = createElem "td"
-let tfoot = createElem "tfoot"
-let th = createElem "th"
-let thead = createElem "thead"
-let tr = createElem "tr"
+    // Demarcasting edits
+    let del = elem "del"
+    let ins = elem "ins"
 
-// Forms
-let button = createElem "button"
-let datalist = createElem "datalist"
-let fieldset = createElem "fieldset"
-let form = createElem "form"
-let label = createElem "label"
-let legend = createElem "legend"
-let meter = createElem "meter"
-let optgroup = createElem "optgroup"
-let option = createElem "option"
-let output = createElem "output"
-let progress = createElem "progress"
-let select = createElem "select"
-let textarea = createElem "textarea"
+    // Table content
+    let caption = elem "caption"
+    let colgroup = elem "colgroup"
+    let table = elem "table"
+    let tbody = elem "tbody"
+    let td = elem "td"
+    let tfoot = elem "tfoot"
+    let th = elem "th"
+    let thead = elem "thead"
+    let tr = elem "tr"
 
-// Interactive elements
-let details = createElem "details"
-let dialog = createElem "dialog"
-let menu = createElem "menu"
-let menuitem = createElem "menuitem"
-let summary = createElem "summary"
+    // Forms
+    let button = elem "button"
+    let datalist = elem "datalist"
+    let fieldset = elem "fieldset"
+    let form = elem "form"
+    let label = elem "label"
+    let legend = elem "legend"
+    let meter = elem "meter"
+    let optgroup = elem "optgroup"
+    let option = elem "option"
+    let output = elem "output"
+    let progress = elem "progress"
+    let select = elem "select"
+    let textarea = elem "textarea"
 
-let text s = Text s
+    // Interactive elements
+    let details = elem "details"
+    let dialog = elem "dialog"
+    let menu = elem "menu"
+    let menuitem = elem "menuitem"
+    let summary = elem "summary"
 
-let attribute key value = Attribute.KeyValue (key,value)
-let onMouseEvent eventType f = EventHandler (MouseEventHandler (eventType, f))
-let onMouseClick = onMouseEvent "onclick"
-let onContextMenu = onMouseEvent "oncontextmenu"
-let onDblClick = onMouseEvent "ondblclick"
-let onMouseDown = onMouseEvent "onmousedown"
-let onMouseEnter = onMouseEvent "onmouseenter"
-let onMouseLeave = onMouseEvent "onmouseleave"
-let onMouseMove = onMouseEvent "onmousemove"
-let onMouseOut = onMouseEvent "onmouseout"
-let onMouseOver = onMouseEvent "onmouseover"
-let onMouseUp = onMouseEvent "onmouseup"
-let onShow = onMouseEvent "onshow"
-//onclick	MouseEvent	DOM L3	A pointing device button has been pressed and released on an element.
-//oncontextmenu	MouseEvent	HTML5	The right button of the mouse is clicked (before the context menu is displayed).
-//ondblclick	MouseEvent	DOM L3	A pointing device button is clicked twice on an element.
-//onmousedown	MouseEvent	DOM L3	A pointing device button (usually a mouse) is pressed on an element.
-//onmouseenter	MouseEvent	DOM L3	A pointing device is moved onto the element that has the listener attached.
-//onmouseleave	MouseEvent	DOM L3	A pointing device is moved off the element that has the listener attached.
-//onmousemove	MouseEvent	DOM L3	A pointing device is moved over an element.
-//onmouseout	MouseEvent	DOM L3	A pointing device is moved off the element that has the listener attached or off one of its children.
-//onmouseover	MouseEvent	DOM L3	A pointing device is moved onto the element that has the listener attached or onto one of its children.
-//onmouseup	MouseEvent	DOM L3	A pointing device button is released over an element.
-//onshow	MouseEvent	HTML5	A contextmenu event was fired on/bubbled to an element that has a contextmenu attribute
+[<AutoOpen>]
+module Attributes =
+    let attribute key value = Attribute.KeyValue (key,value)
+
+[<AutoOpen>]
+module Events =
+    let onMouseEvent eventType f = EventHandlerBinding (MouseEventHandler (eventType, f))
+
+    let onMouseClick = onMouseEvent "onclick"
+    let onContextMenu = onMouseEvent "oncontextmenu"
+    let onDblClick = onMouseEvent "ondblclick"
+    let onMouseDown = onMouseEvent "onmousedown"
+    let onMouseEnter = onMouseEvent "onmouseenter"
+    let onMouseLeave = onMouseEvent "onmouseleave"
+    let onMouseMove = onMouseEvent "onmousemove"
+    let onMouseOut = onMouseEvent "onmouseout"
+    let onMouseOver = onMouseEvent "onmouseover"
+    let onMouseUp = onMouseEvent "onmouseup"
+    let onShow = onMouseEvent "onshow"
+    //onclick	MouseEvent	DOM L3	A pointing device button has been pressed and released on an element.
+    //oncontextmenu	MouseEvent	HTML5	The right button of the mouse is clicked (before the context menu is displayed).
+    //ondblclick	MouseEvent	DOM L3	A pointing device button is clicked twice on an element.
+    //onmousedown	MouseEvent	DOM L3	A pointing device button (usually a mouse) is pressed on an element.
+    //onmouseenter	MouseEvent	DOM L3	A pointing device is moved onto the element that has the listener attached.
+    //onmouseleave	MouseEvent	DOM L3	A pointing device is moved off the element that has the listener attached.
+    //onmousemove	MouseEvent	DOM L3	A pointing device is moved over an element.
+    //onmouseout	MouseEvent	DOM L3	A pointing device is moved off the element that has the listener attached or off one of its children.
+    //onmouseover	MouseEvent	DOM L3	A pointing device is moved onto the element that has the listener attached or onto one of its children.
+    //onmouseup	MouseEvent	DOM L3	A pointing device button is released over an element.
+    //onshow	MouseEvent	HTML5	A contextmenu event was fired on/bubbled to an element that has a contextmenu attribute
+
+
+    //keydown	KeyboardEvent	DOM L3	A key is pressed down.
+    //keypress	KeyboardEvent	DOM L3	A key is pressed down and that key normally produces a character value (use input instead).
+    //keyup	KeyboardEvent	DOM L3	A key is released.
+    let onKeyboardEvent eventType f = EventHandlerBinding (KeyboardEventHandler (eventType, f))
+    let onKeydown = onKeyboardEvent "onkeydown"
+    let onKeypress = onKeyboardEvent "onkeypress"
+    let onKeyup = onKeyboardEvent "onkeyup"
+
+    let onEvent eventType f = EventHandlerBinding (EventHandler (eventType, f))
+    let onAbort = onEvent "onabort"
+    let onAfterPrint = onEvent "onafterprint"
+    let onAudioEnd = onEvent "onaudioend"
+    let onAudioStart = onEvent "onaudiostart"
+    let onBeforePrint = onEvent "onbeforeprint"
+    let onCached = onEvent "oncached"
+    let onCanPlay = onEvent "oncanplay"
+    let onCanPlayThrough = onEvent "oncanplaythrough"
+    let onChange = onEvent "onchange"
+    let onChargingChange = onEvent "onchargingchange"
+    let onChargingTimeChange = onEvent "onchargingtimechange"
+    let onChecking = onEvent "onchecking"
+    let onClose = onEvent "onclose"
+    let onDischargingTimeChange = onEvent "ondischargingtimechange"
+    let onDOMContentLoaded = onEvent "onDOMContentLoaded"
+    let onDownloading = onEvent "ondownloading"
+    let onDurationchange = onEvent "ondurationchange"
+    let onEmptied = onEvent "onemptied"
+    let onEnd = onEvent "onend"
+    let onEnded = onEvent "onended"
+    let onError = onEvent "onerror"
+    let onCullScreenChange = onEvent "onfullscreenchange"
+    let onCullScreenError = onEvent "onfullscreenerror"
+    let onInput = onEvent "oninput"
+    let onInvalid = onEvent "oninvalid"
+    let onLanguageChange = onEvent "onlanguagechange"
+    let onLevelChange = onEvent "onlevelchange"
+    let onLoadedData = onEvent "onloadeddata"
+    let onLoadedMetaData = onEvent "onloadedmetadata"
+    let onNoUpdate = onEvent "onnoupdate"
+    let onObsolete = onEvent "onobsolete"
+    let onOffline = onEvent "onoffline"
+    let onOnline = onEvent "ononline"
+    let onOpen = onEvent "onopen"
+    let onOrientationChange = onEvent "onorientationchange"
+    let onPause = onEvent "onpause"
+    let onPointerlockchange = onEvent "onpointerlockchange"
+    let onPointerlockerror = onEvent "onpointerlockerror"
+    let onPlay = onEvent "onplay"
+    let onPlaying = onEvent "onplaying"
+    let onRateChange = onEvent "onratechange"
+    let onReadyStateChange = onEvent "onreadystatechange"
+    let onReset = onEvent "onreset"
+    let onSeeked = onEvent "onseeked"
+    let onSeeking = onEvent "onseeking"
+    let onSelectStart = onEvent "onselectstart"
+    let onSelectionChange = onEvent "onselectionchange"
+    let onSoundEnd = onEvent "onsoundend"
+    let onSoundStart = onEvent "onsoundstart"
+    let onSpeechEnd = onEvent "onspeechend"
+    let onSpeechStart = onEvent "onspeechstart"
+    let onStalled = onEvent "onstalled"
+    let onStart = onEvent "onstart"
+    let onSubmit = onEvent "onsubmit"
+    let onSuccess = onEvent "onsuccess"
+    let onSuspend = onEvent "onsuspend"
+    let onTimeUpdate = onEvent "ontimeupdate"
+    let onUpdateReady = onEvent "onupdateready"
+    let onVoicesChanged = onEvent "onvoiceschanged"
+    let onVisibilityChange = onEvent "onvisibilitychange"
+    let onVolumeChange = onEvent "onvolumechange"
+    let onVrdisplayConnected = onEvent "onvrdisplayconnected"
+    let onVrdisplayDisconnected = onEvent "onvrdisplaydisconnected"
+    let onVrdisplayPresentChange = onEvent "onvrdisplaypresentchange"
+    let onWaiting = onEvent "onwaiting"
 
 
 // List of events from: https://developer.mozilla.org/en-US/docs/Web/Events
@@ -213,77 +308,6 @@ let onShow = onMouseEvent "onshow"
 //dragover	DragEvent	HTML5	An element or text selection is being dragged over a valid drop target (every 350ms).
 //dragstart	DragEvent	HTML5	The user starts dragging an element or text selection.
 //drop	DragEvent	HTML5	An element is dropped on a valid drop target.
-//abort	Event	IndexedDB	A transaction has been aborted.
-//afterprint	Event	HTML5	The associated document has started printing or the print preview has been closed.
-//audioend	Event	Web Speech API	The user agent has finished capturing audio for speech recognition.
-//audiostart	Event	Web Speech API	The user agent has started to capture audio for speech recognition.
-//beforeprint	Event	HTML5	The associated document is about to be printed or previewed for printing.
-//cached	Event	Offline	The resources listed in the manifest have been downloaded, and the application is now cached.
-//canplay	Event	HTML5 media	The user agent can play the media, but estimates that not enough data has been loaded to play the media up to its end without having to stop for further buffering of content.
-//canplaythrough	Event	HTML5 media	The user agent can play the media, and estimates that enough data has been loaded to play the media up to its end without having to stop for further buffering of content.
-//change	Event	DOM L2, HTML5	The change event is fired for <input>, <select>, and<textarea> elements when a change to the element's value is committed by the user.
-//chargingchange	Event	Battery status	The battery begins or stops charging.
-//chargingtimechange	Event	Battery status	The chargingTime attribute has been updated.
-//checking	Event	Offline	The user agent is checking for an update, or attempting to download the cache manifest for the first time.
-//close	Event	WebSocket	A WebSocket connection has been closed.
-//dischargingtimechange	Event	Battery status	The dischargingTime attribute has been updated.
-//DOMContentLoaded	Event	HTML5	The document has finished loading (but not its dependent resources).
-//downloading	Event	Offline	The user agent has found an update and is fetching it, or is downloading the resources listed by the cache manifest for the first time.
-//durationchange	Event	HTML5 media	The duration attribute has been updated.
-//emptied	Event	HTML5 media	The media has become empty; for example, this event is sent if the media has already been loaded (or partially loaded), and the load() method is called to reload it.
-//end	Event	Web Speech API	The speech recognition service has disconnected.
-//ended	Event	HTML5 media	Playback has stopped because the end of the media was reached.
-//ended	Event	Web Audio API
-//error	Event	Offline	An error occurred while downloading the cache manifest or updating the content of the application.
-//error	Event	WebSocket	A WebSocket connection has been closed with prejudice (some data couldn't be sent for example).
-//error	Event	Server Sent Events	An event source connection has been failed.
-//error	Event	IndexedDB	A request caused an error and failed.
-//error	Event	Web Speech API	A speech recognition error occurs.
-//fullscreenchange	Event	Full Screen	An element was turned to fullscreen mode or back to normal mode.
-//fullscreenerror	Event	Full Screen	It was impossible to switch to fullscreen mode for technical reasons or because the permission was denied.
-//input	Event	HTML5	The value of an element changes or the content of an element with the attribute contenteditable is modified.
-//invalid	Event	HTML5	A submittable element has been checked and doesn't satisfy its constraints.
-//languagechange	Event	HTML5.1
-//levelchange	Event	Battery status	The level attribute has been updated.
-//loadeddata	Event	HTML5 media	The first frame of the media has finished loading.
-//loadedmetadata	Event	HTML5 media	The metadata has been loaded.
-//noupdate	Event	Offline	The manifest hadn't changed.
-//obsolete	Event	Offline	The manifest was found to have become a 404 or 410 page, so the application cache is being deleted.
-//offline	Event	HTML5 offline	The browser has lost access to the network.
-//online	Event	HTML5 offline	The browser has gained access to the network (but particular websites might be unreachable).
-//open	Event	WebSocket	A WebSocket connection has been established.
-//open	Event	Server Sent Events	An event source connection has been established.
-//orientationchange	Event	Screen Orientation	The orientation of the device (portrait/landscape) has changed
-//pause	Event	HTML5 media	Playback has been paused.
-//pointerlockchange	Event	Pointer Lock	The pointer was locked or released.
-//pointerlockerror	Event	Pointer Lock	It was impossible to lock the pointer for technical reasons or because the permission was denied.
-//play	Event	HTML5 media	Playback has begun.
-//playing	Event	HTML5 media	Playback is ready to start after having been paused or delayed due to lack of data.
-//ratechange	Event	HTML5 media	The playback rate has changed.
-//readystatechange	Event	HTML5 and XMLHttpRequest	The readyState attribute of a document has changed.
-//reset	Event	DOM L2, HTML5	A form is reset.
-//seeked	Event	HTML5 media	A seek operation completed.
-//seeking	Event	HTML5 media	A seek operation began.
-//selectstart	Event	Selection API	A selection just started.
-//selectionchange	Event	Selection API	The selection in the document has been changed.
-//soundend	Event	Web Speech API	Any sound — recognisable speech or not — has stopped being detected.
-//soundstart	Event	Web Speech API	Any sound — recognisable speech or not — has been detected.
-//speechend	Event	Web Speech API	Speech recognised by the speech recognition service has stopped being detected.
-//speechstart	Event	Web Speech API	Sound that is recognised by the speech recognition service as speech has been detected.
-//stalled	Event	HTML5 media	The user agent is trying to fetch media data, but data is unexpectedly not forthcoming.
-//start	Event	Web Speech API	The speech recognition service has begun listening to incoming audio with intent to recognize grammars associated with the current SpeechRecognition.
-//submit	Event	DOM L2, HTML5	A form is submitted.
-//success	Event	IndexedDB	A request successfully completed.
-//suspend	Event	HTML5 media	Media data loading has been suspended.
-//timeupdate	Event	HTML5 media	The time indicated by the currentTime attribute has been updated.
-//updateready	Event	Offline	The resources listed in the manifest have been newly redownloaded, and the script can use swapCache() to switch to the new cache.
-//voiceschanged	Event	Web Speech API	The list of SpeechSynthesisVoice objects that would be returned by the SpeechSynthesis.getVoices()method has changed (when the voiceschanged event fires.)
-//visibilitychange	Event	Page visibility	The content of a tab has become visible or has been hidden.
-//volumechange	Event	HTML5 media	The volume has changed.
-//vrdisplayconnected	Event	WebVR API	A compatible VR device has been connected to the computer.
-//vrdisplaydisconnected	Event	WebVR API	A compatible VR device has been disconnected from the computer.
-//vrdisplaypresentchange	Event	WebVR API	The presenting state of a VR device has changed — i.e. from presenting to not presenting, or vice versa.
-//waiting	Event	HTML5 media	Playback has stopped because of a temporary lack of data.
 //blur	FocusEvent	DOM L3	An element has lost focus (does not bubble).
 //DOMFocusIn  Unimplemented	FocusEvent	DOM L3	An element has received focus (use focus or focusininstead).
 //DOMFocusOut  Unimplemented	FocusEvent	DOM L3	An element has lost focus (use blur or focusoutinstead).
@@ -293,9 +317,6 @@ let onShow = onMouseEvent "onshow"
 //gamepadconnected	GamepadEvent	Gamepad	A gamepad has been connected.
 //gamepaddisconnected	GamepadEvent	Gamepad	A gamepad has been disconnected.
 //hashchange	HashChangeEvent	HTML5	The fragment identifier of the URL has changed (the part of the URL after the #).
-//keydown	KeyboardEvent	DOM L3	A key is pressed down.
-//keypress	KeyboardEvent	DOM L3	A key is pressed down and that key normally produces a character value (use input instead).
-//keyup	KeyboardEvent	DOM L3	A key is released.
 //message	MessageEvent	WebSocket	A message is received through a WebSocket.
 //message	MessageEvent	Web Workers	A message is received from a Web Worker.
 //message	MessageEvent	Web Messaging	A message is received from a child (i)frame or a parent window.
@@ -377,3 +398,42 @@ let onShow = onMouseEvent "onshow"
 //complete		IndexedDB
 //upgradeneeded		IndexedDB	An attempt was made to open a database with a version number higher than its current version. Aversionchange transaction has been created.
 //versionchange		IndexedDB	A versionchange transaction completed.
+//[<AutoOpen>]
+//module App =
+//    type AppState<'TModel, 'TMessage> = {
+//            Model: 'TModel;
+//            View: 'TModel -> ('TMessage -> unit) -> Node;
+//            Update: 'TMessage -> 'TModel -> 'TModel}
+//
+//    type Observer<'T>(next, error, completed) =
+//        interface System.IObserver<'T> with
+//            member x.OnCompleted() = completed()
+//            member x.OnError(e) = error e
+//            member x.OnNext(v) = next v
+//
+//    type App<'TModel, 'TMessage> = {AppState: AppState<'TModel, 'TMessage>; Node: Node option; CurrentTree: obj option}
+//
+//    let start app =
+//        let createTree view model handler =
+//            view model handler
+//            |> VDom.render
+//
+//        MailboxProcessor.Start(fun inbox ->
+//            let rec loop state =
+//                async {
+//                    match state.Node, state.CurrentTree with
+//                    | None,_ ->
+//                        let tree = createTree state.AppState.View state.AppState.Model inbox.Post
+//                        let rootNode = createElement tree
+//                        document.body.appendChild(rootNode) |> ignore
+//                        return! loop {state with CurrentTree = Some tree; Node = Some rootNode}
+//                    | Some rootNode, Some currentTree ->
+//                        let! message = inbox.Receive()
+//                        let model' = state.AppState.Update message state.AppState.Model
+//                        let tree = createTree state.AppState.View model' inbox.Post
+//                        let patches = diff(currentTree, tree)
+//                        patch(rootNode, patches) |> ignore
+//                        return! loop {state with AppState = {state.AppState with Model = model'}; CurrentTree = Some tree}
+//                    | _ -> failwith "Shouldn't happen"
+//                }
+//            loop {AppState = app; Node = None; CurrentTree = None})
