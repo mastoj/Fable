@@ -116,8 +116,7 @@ module VDom =
     open Html
 
     let rec render node =
-        let renderMouseEventHandler = function
-            | OnClick h -> "onclick", (h :> obj)
+        let renderMouseEventHandler (eventType, handler) = eventType, (handler :> obj)
 
         let renderHandler = function
             | MouseEventHandler mh -> renderMouseEventHandler mh
@@ -159,7 +158,9 @@ type App<'TModel, 'TMessage> = {AppState: AppState<'TModel, 'TMessage>; Node: No
 
 type Action =
     | Increment
+    | IncrementWith of int
     | Decrement
+    | DecrementWith of int
 
 let start app =
     let createTree view model handler =
@@ -194,18 +195,20 @@ let view m handler =
             Style [|"border","1px solid red"|]
         ]
         [
-            div [Style [|"border","1px solid blue"|]; mouseClick (fun x -> handler Increment)] [Html.Text (string "Increment")]
+            div [Style [|"border","1px solid blue"|]; onMouseClick (fun x -> handler Increment); onDblClick (fun x -> handler (IncrementWith 100))] [Html.Text (string "Increment")]
             text (string m)
             br []
             span [] [text "Hello world"]
             hr []
             button [attribute "name" "Click me"] [text "Click me"]
-            div [Html.Style [|"border", "1px solid green"; "height", ((string (70+m)) + "px")|]; Html.mouseClick (fun x -> handler Decrement)] [Html.Text (string "Decrement")]
+            div [Html.Style [|"border", "1px solid green"; "height", ((string (70+m)) + "px")|]; onMouseClick (fun x -> handler Decrement); onDblClick (fun x -> handler (DecrementWith 50))] [Html.Text (string "Decrement")]
         ]
 
 let update msg model =
     match msg with
     | Increment -> model + 1
+    | IncrementWith x -> model + x
     | Decrement -> model - 1
+    | DecrementWith x -> model - x
 
 start {Model = 0; View = view; Update = update}
