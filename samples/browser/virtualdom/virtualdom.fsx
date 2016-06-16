@@ -116,15 +116,23 @@ module VDom =
     open Html
 
     let rec render node =
-        let renderMouseEventHandler (eventType, handler) = eventType, (handler :> obj)
+//        let renderMouseEventHandler (eventType, handler) = eventType, (handler :> obj)
+        let renderEventHandler (eventType, handler) = eventType, handler
 
-        let renderHandler = function
-            | MouseEventHandler mh -> renderMouseEventHandler mh
+        let renderEventBinding binding =
+            match binding with
+            | MouseEventHandler (eventType, handler) -> (eventType, handler :> obj)//renderMouseEventHandler mh
+            | KeyboardEventHandler (eventType, handler) -> (eventType, handler :> obj)
+            | EventHandler (eventType, handler) -> (eventType, handler :> obj)
+            | x ->
+                printfn "Missing renderer for handler: %A" x
+                raise (exn "Missing renderer for handler")
+            |> renderEventHandler
 
         let toAttrs attrs =
             attrs
             |> List.map (function
-                    | EventHandler handler -> handler |> renderHandler
+                    | EventHandlerBinding binding -> binding |> renderEventBinding
                     | Style style -> "style", ((style |> Array.map (fun (k,v) -> k + ":" + v) |> join ";") :> obj)
                     | KeyValue (key, value) -> key,(value :> obj)
                 )
@@ -134,7 +142,6 @@ module VDom =
         | Element((tag,attrs), nodes) ->
             let hAttrs = attrs |> toAttrs
             let children = nodes |> List.map render |> List.toArray
-            printfn "Debug here"
             h(tag, hAttrs, children)
 
         | VoidElement (tag, attrs) ->
@@ -155,12 +162,6 @@ type Observer<'T>(next, error, completed) =
         member x.OnNext(v) = next v
 
 type App<'TModel, 'TMessage> = {AppState: AppState<'TModel, 'TMessage>; Node: Node option; CurrentTree: obj option}
-
-type Action =
-    | Increment
-    | IncrementWith of int
-    | Decrement
-    | DecrementWith of int
 
 let start app =
     let createTree view model handler =
@@ -189,26 +190,76 @@ let start app =
 
 open VDom
 open Html
+
+type Item =
+    {
+        Name: string
+        Done: bool
+        Id: int
+    }
+type Model =
+    {
+        Counter: int
+        Items: Item list
+        Input: string
+    }
+type Action =
+    | Increment
+    | IncrementWith of int
+    | Decrement
+    | DecrementWith of int
+    | AddItem of Item
+    | ChangeInput of string
+
 let view m handler =
+    let itemList items =
+        ul []
+            (items |> List.map (fun i -> li [] [text i.Name]))
+
     div
         [
             Style [|"border","1px solid red"|]
         ]
         [
             div [Style [|"border","1px solid blue"|]; onMouseClick (fun x -> handler Increment); onDblClick (fun x -> handler (IncrementWith 100))] [Html.Text (string "Increment")]
-            text (string m)
+            text (string m.Counter)
             br []
             span [] [text "Hello world"]
             hr []
-            button [attribute "name" "Click me"] [text "Click me"]
-            div [Html.Style [|"border", "1px solid green"; "height", ((string (70+m)) + "px")|]; onMouseClick (fun x -> handler Decrement); onDblClick (fun x -> handler (DecrementWith 50))] [Html.Text (string "Decrement")]
+            (m.Items |> itemList)
+            input
+                [   attribute "value" m.Input
+                    attribute "type" "text"
+                    onKeydown (fun x ->
+                        if x.code = "Enter"
+                        then handler (AddItem {Name = m.Input; Id = 0; Done = false})
+                        else printfn "Yolo: %s" x.code)
+                    onKeyup (fun x -> printfn "Trying to change %A" (x?target?value); handler (ChangeInput (x?target?value :?> string)))]
+            button [    attribute "name" "Click me"
+                        onMouseClick (fun _ -> handler (AddItem {Name = m.Input; Id = 0; Done = false}))
+                    ]
+                    [text "Click me"]
+            div [Html.Style [|"border", "1px solid green"; "height", ((string (70+m.Counter)) + "px")|]; onMouseClick (fun x -> handler Decrement); onDblClick (fun x -> handler (DecrementWith 50))] [Html.Text (string "Decrement")]
         ]
 
 let update msg model =
-    match msg with
-    | Increment -> model + 1
-    | IncrementWith x -> model + x
-    | Decrement -> model - 1
-    | DecrementWith x -> model - x
+    let model' =
+        match msg with
+        | Increment -> {model with Counter = model.Counter + 1}
+        | IncrementWith x -> {model with Counter = model.Counter + x}
+        | Decrement -> {model with Counter = model.Counter - 1}
+        | DecrementWith x -> {model with Counter = model.Counter - 1}
+        | AddItem item ->
+            let maxId =
+                if model.Items = [] then 1
+                else
+                    model.Items
+                    |> List.map (fun x -> x.Id)
+                    |> List.maxBy (fun x -> x)
+            let item' = {item with Id = maxId + 1}
+            {model with Items = item'::model.Items; Input = ""}
+        | ChangeInput v -> {model with Input = v}
+    printfn "New model %A" model'
+    model'
 
-start {Model = 0; View = view; Update = update}
+start {Model = {Counter = 0; Items = []; Input = ""}; View = view; Update = update}
