@@ -122,11 +122,11 @@ module VDom =
         let renderEventBinding binding =
             match binding with
             | MouseEventHandler (eventType, handler) -> (eventType, handler :> obj)//renderMouseEventHandler mh
-            | KeyboardEventHandler (eventType, handler) -> (eventType, handler :> obj)
+            //| KeyboardEventHandler (eventType, handler) -> (eventType, handler :> obj)
             | EventHandler (eventType, handler) -> (eventType, handler :> obj)
-            | x ->
-                printfn "Missing renderer for handler: %A" x
-                raise (exn "Missing renderer for handler")
+//            | x ->
+                //printfn "Missing renderer for handler: %A" x
+//                raise (exn "Missing renderer for handler")
             |> renderEventHandler
 
         let toAttrs attrs =
@@ -179,11 +179,16 @@ let start app =
                     return! loop {state with CurrentTree = Some tree; Node = Some rootNode}
                 | Some rootNode, Some currentTree ->
                     let! message = inbox.Receive()
-                    let model' = state.AppState.Update message state.AppState.Model
-                    let tree = createTree state.AppState.View model' inbox.Post
-                    let patches = diff(currentTree, tree)
-                    patch(rootNode, patches) |> ignore
-                    return! loop {state with AppState = {state.AppState with Model = model'}; CurrentTree = Some tree}
+                    try
+                        let model' = state.AppState.Update message state.AppState.Model
+                        let tree = createTree state.AppState.View model' inbox.Post
+                        let patches = diff(currentTree, tree)
+                        patch(rootNode, patches) |> ignore
+                        return! loop {state with AppState = {state.AppState with Model = model'}; CurrentTree = Some tree}
+                    with
+                        x ->
+                            printfn "Error updating model: %A" x
+                            return! loop state
                 | _ -> failwith "Shouldn't happen"
             }
         loop {AppState = app; Node = None; CurrentTree = None})
@@ -247,6 +252,7 @@ let view m handler =
 
 let update msg model =
     let model' =
+        printfn "Received: %A" msg
         match msg with
         | Increment -> {model with Counter = model.Counter + 1}
         | IncrementWith x -> {model with Counter = model.Counter + x}
