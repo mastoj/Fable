@@ -210,11 +210,14 @@ type Action =
     | DecrementWith of int
     | AddItem of Item
     | ChangeInput of string
+    | MarkAsDone of Item
 
 let view m handler =
     let itemList items =
-        ul []
-            (items |> List.map (fun i -> li [] [text i.Name]))
+        ul [attribute "className" "todo-list"]
+            (items |> List.map (fun i ->
+                li [    attribute "className" ("todo-item " + (if i.Done then "done" else ""))
+                        onMouseClick (fun x -> handler (MarkAsDone i))] [text i.Name]))
 
     div
         [
@@ -259,6 +262,10 @@ let update msg model =
             let item' = {item with Id = maxId + 1}
             {model with Items = item'::model.Items; Input = ""}
         | ChangeInput v -> {model with Input = v}
+        | MarkAsDone i ->
+            let items' =
+                model.Items |> List.map (fun i' -> if i' <> i then i' else {i with Done = true})
+            {model with Items = items'}
     printfn "New model %A" model'
     model'
 
