@@ -20,7 +20,7 @@ module Types =
         | KeyboardEventHandler of KeyboardEventHandler
         | EventHandler of EventHandler
 
-    type Style = (string*string) []
+    type Style = (string*string) list
 
     type KeyValue = string*string
 
@@ -100,6 +100,7 @@ module Tags =
     let ol = elem "ol"
     let p = elem "p"
     let pre = elem "pre"
+    let section = elem "section"
     let ul = elem "ul"
 
     // Inline text semantics

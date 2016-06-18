@@ -13,6 +13,7 @@
   "dependencies": {
     "core-js": "^2.4.0",
     "fable-core": "0.0.16",
+    "todomvc-app-css": "^2.0.6",
     "virtual-dom": "2.1.1"
   },
   "engines": {

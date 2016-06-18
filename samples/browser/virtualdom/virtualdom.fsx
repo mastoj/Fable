@@ -48,48 +48,119 @@ type TodoAction =
     | AddItem of Item
     | ChangeInput of string
     | MarkAsDone of Item
+    | ToggleItem of Item
+    | Destroy of Item
+    | CheckAll
+    | UnCheckAll
 type Action =
     | CounterAction of CounterAction
     | TodoAction of TodoAction
 
-let todoView m handler =
-    let itemList items =
-        ul [attribute "className" "todo-list"]
-            (items |> List.map (fun i ->
-                li [    attribute "className" ("todo-item " + (if i.Done then "done" else ""))
-                        onMouseClick (fun x -> handler (MarkAsDone i))] [text i.Name]))
 
-    div
-        []
-        [
-            (m.Items |> itemList)
-            input
-                [   attribute "value" m.Input
-                    attribute "type" "text"
+    //        <section class="todoapp">
+    //        			<header class="header">
+    //        				<h1>todos</h1>
+    //        				<input class="new-todo" placeholder="What needs to be done?" autofocus="">
+    //        			</header>
+    //        			<footer class="footer" style="display: block;">
+    //        				<span class="todo-count"><strong>2</strong> items left</span>
+    //        				<ul class="filters">
+    //        					<li>
+    //        						<a href="#/" class="selected">All</a>
+    //        					</li>
+    //        					<li>
+    //        						<a href="#/active">Active</a>
+    //        					</li>
+    //        					<li>
+    //        						<a href="#/completed">Completed</a>
+    //        					</li>
+    //        				</ul>
+    //        				<button class="clear-completed" style="display: none;"></button>
+    //        			</footer>
+    //        		</section>
+
+
+
+let todoHeader model handler =
+//        			<header class="header">
+//        				<h1>todos</h1>
+//        				<input class="new-todo" placeholder="What needs to be done?" autofocus="">
+//        			</header>
+    header
+        [attribute "className" "header"]
+        [   h1 [] [text "todos"]
+            input [ attribute "className" "new-todo"
+                    attribute "placeholder" "What needs to be done?"
+                    attribute "value" model
                     onKeydown (fun x ->
+                        printfn "Yolo: %s" x.code
                         if x.code = "Enter"
-                        then handler (AddItem {Name = m.Input; Id = 0; Done = false})
-                        else printfn "Yolo: %s" x.code)
-                    onKeyup (fun x -> printfn "Trying to change %A" (x?target?value); handler (ChangeInput (x?target?value :?> string)))]
-            button [    attribute "name" "Click me"
-                        onMouseClick (fun _ -> handler (AddItem {Name = m.Input; Id = 0; Done = false}))
-                    ]
-                    [text "Click me"]
+                        then handler (AddItem {Name = model; Id = 0; Done = false})
+                        )
+                    onKeyup (fun x -> handler (ChangeInput (x?target?value :?> string))) ]]
+
+let listItem handler item =
+// <li data-id="1466286291319" class=""><div class="view"><input class="toggle" type="checkbox"><label>erwerwe</label><button class="destroy"></button></div></li>
+    let itemChecked = if item.Done then "true" else ""
+    li []
+       [ div [ attribute "className" "view" ]
+             [ input [  attribute "className" "toggle"
+                        attribute "type" "checkbox"
+                        attribute "checked" itemChecked
+                        onMouseClick (fun e -> handler (ToggleItem item)) ]
+               label [] [ text item.Name ]
+               button [ attribute "className" "destroy"
+                        onMouseClick (fun e -> handler (Destroy item)) ] [] ]]
+     |> (fun i -> printfn "%A" i; i)
+
+let itemList handler items =
+    ul [ attribute "className" "todo-list" ]
+       (items |> List.map (listItem handler))
+
+let todoMain items handler =
+    let allChecked = items |> List.exists (fun i -> not i.Done)
+    section [   attribute "className" "main"
+                attribute "style" "display: block;" ]
+            [   input [ attribute "className" "toggle-all"
+                        attribute "type" "checkbox"
+                        attribute "checked" (if not allChecked then "true" else "")
+                        onMouseClick (fun e ->
+                                    if allChecked
+                                    then handler CheckAll
+                                    else handler UnCheckAll) ]
+                label [ attribute "for" "toggle-all" ]
+                      [ text "Mark all as complete" ]
+                (itemList handler items) ]
+
+let todoView m handler =
+    section
+        [attribute "className" "todoapp"]
+        [
+            (todoHeader m.Input handler)
+            (todoMain m.Items handler)
         ]
 
 let view m handler =
     div
         [
-            Style [|"border","1px solid red"|]
+            Style ["border","1px solid red"]
         ]
         [
-            div [Style [|"border","1px solid blue"|]; onMouseClick (fun x -> handler (CounterAction Increment)); onDblClick (fun x -> handler (CounterAction (IncrementWith 100)))] [text (string "Increment")]
+            div [   Style ["border","1px solid blue"]
+                    onMouseClick (fun x -> handler (CounterAction Increment))
+                    onDblClick (fun x -> handler (CounterAction (IncrementWith 100)))] [text (string "Increment")]
             text (string m.Counter)
-            div [Style [|"border", "1px solid green"; "height", ((string (70+m.Counter)) + "px")|]; onMouseClick (fun x -> handler (CounterAction Decrement)); onDblClick (fun x -> handler (CounterAction (DecrementWith 50)))] [text (string "Decrement")]
+            div [   Style ["border", "1px solid green"; "height", ((string (70+m.Counter)) + "px")]
+                    onMouseClick (fun x -> handler (CounterAction Decrement))
+                    onDblClick (fun x -> handler (CounterAction (DecrementWith 50)))]
+                [text (string "Decrement")]
             todoView m.Todo (fun x -> handler (Action.TodoAction x))
         ]
 
 let updateTodo msg model =
+    let checkAllWith v =
+        { model with Items = model.Items |> List.map (fun i -> { i with Done = v })}
+
     match msg with
     | AddItem item ->
         let maxId =
@@ -105,6 +176,14 @@ let updateTodo msg model =
         let items' =
             model.Items |> List.map (fun i' -> if i' <> i then i' else {i with Done = true})
         {model with Items = items'}
+    | CheckAll -> checkAllWith true
+    | UnCheckAll -> checkAllWith false
+    | Destroy i -> {model with Items = model.Items |> List.filter (fun i' -> i'.Id <> i.Id)}
+    | ToggleItem i ->
+        let items' =
+            model.Items |> List.map (fun i' -> if i' <> i then i' else {i with Done = not i.Done})
+        {model with Items = items'}
+
 
 let counterUpdate msg model =
     match msg with
@@ -122,4 +201,4 @@ let update msg model =
     printfn "New model %A" model'
     model'
 
-start {Model = {Counter = 0; Todo = {Items = []; Input = ""}}; View = view; Update = update}
+start {Model = {Counter = 0; Todo = {Items = [ { Name = "Yolo"; Done = false; Id = 0}]; Input = ""}}; View = view; Update = update}

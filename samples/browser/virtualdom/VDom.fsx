@@ -42,7 +42,7 @@ module VDom =
             attrs
             |> List.map (function
                     | EventHandlerBinding binding -> binding |> renderEventBinding
-                    | Style style -> "style", ((style |> Array.map (fun (k,v) -> k + ":" + v) |> join ";") :> obj)
+                    | Style style -> "style", ((style |> Array.ofList |> Array.map (fun (k,v) -> k + ":" + v) |> join ";") :> obj)
                     | KeyValue (key, value) -> key,(value :> obj)
                 )
             |> createObj
