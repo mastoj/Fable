@@ -38,14 +38,29 @@ module VDom =
                 raise (exn "Missing renderer for handler")
             |> renderEventHandler
 
+        let renderAttributes attributes =
+            attributes
+            |> List.map (fun (Attribute.Attribute (k,v)) -> k,(v :> obj))
+            |> (function
+                | [] -> None
+                | p -> Some ("attributes", (p |> createObj)))
+
         let toAttrs attrs =
-            attrs
-            |> List.map (function
-                    | EventHandlerBinding binding -> binding |> renderEventBinding
-                    | Style style -> "style", ((style |> Array.ofList |> Array.map (fun (k,v) -> k + ":" + v) |> join ";") :> obj)
-                    | KeyValue (key, value) -> key,(value :> obj)
-                )
+            let (attributes, others) = attrs |> List.partition (function Attribute _ -> true | _ -> false)
+            let renderedAttributes = attributes |> renderAttributes
+            let renderedOthers =
+                others
+                |> List.map (function
+                        | EventHandlerBinding binding -> binding |> renderEventBinding
+                        | Style style -> "style", ((style |> Array.ofList |> Array.map (fun (k,v) -> k + ":" + v) |> join ";") :> obj)
+                        | Property (key, value) -> key,(value :> obj)
+                        | Attribute _ -> failwith "Should not happen"
+                    )
+            match renderedAttributes with
+            | Some x -> x::renderedOthers
+            | _ -> renderedOthers
             |> createObj
+            |> (fun x -> printfn "Attribtues: "; printfn "%A" x; x)
 
         match node with
         | Element((tag,attrs), nodes) ->

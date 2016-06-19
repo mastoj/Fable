@@ -20,6 +20,11 @@ open Fable.Import.Browser
 open App
 open Html
 
+type Filter =
+    | All
+    | Completed
+    | Active
+
 type Item =
     {
         Name: string
@@ -30,6 +35,7 @@ type TodoModel =
     {
         Items: Item list
         Input: string
+        Filter: Filter
     }
 
 type Model =
@@ -52,6 +58,8 @@ type TodoAction =
     | Destroy of Item
     | CheckAll
     | UnCheckAll
+    | SetActiveFilter of Filter
+    | ClearCompleted
 type Action =
     | CounterAction of CounterAction
     | TodoAction of TodoAction
@@ -79,6 +87,43 @@ type Action =
     //        			</footer>
     //        		</section>
 
+let filterToTextAndUrl = function
+    | All -> "All", ""
+    | Completed -> "Completed", "completed"
+    | Active -> "Active", "active"
+
+let filter handler activeFilter f =
+    let linkClass = if f = activeFilter then "selected" else ""
+    let fText,url = f |> filterToTextAndUrl
+    li
+        [ onMouseClick (fun _ -> SetActiveFilter f |> handler)]
+        [ a
+            [ attribute "href" ("#/" + url); attribute "class" linkClass ]
+            [ text fText] ]
+
+let filters model handler =
+    ul
+        [ attribute "class" "filters" ]
+        ([ All; Active; Completed ] |> List.map (filter handler model.Filter))
+
+let todoFooter model handler =
+    let clearVisibility =
+        if model.Items |> List.exists (fun i -> i.Done)
+        then ""
+        else "none"
+    let activeCount = model.Items |> List.filter (fun i -> not i.Done) |> List.length |> string
+    footer
+        [   attribute "class" "footer"; Style ["display","block"]]
+        [   span
+                [ attribute "class" "todo-count" ]
+                [   strong [] [text activeCount]
+                    text " items left" ]
+            (filters model handler)
+            button
+                [   attribute "class" "clear-completed"
+                    Style [ "display", clearVisibility ]
+                    onMouseClick (fun _ -> handler ClearCompleted)]
+                [ text "Clear completed" ] ]
 
 
 let todoHeader model handler =
@@ -87,11 +132,11 @@ let todoHeader model handler =
 //        				<input class="new-todo" placeholder="What needs to be done?" autofocus="">
 //        			</header>
     header
-        [attribute "className" "header"]
+        [attribute "class" "header"]
         [   h1 [] [text "todos"]
-            input [ attribute "className" "new-todo"
-                    attribute "placeholder" "What needs to be done?"
-                    attribute "value" model
+            input [ attribute "class" "new-todo"
+                    property "placeholder" "What needs to be done?"
+                    property "value" model
                     onKeydown (fun x ->
                         printfn "Yolo: %s" x.code
                         if x.code = "Enter"
@@ -102,43 +147,51 @@ let todoHeader model handler =
 let listItem handler item =
 // <li data-id="1466286291319" class=""><div class="view"><input class="toggle" type="checkbox"><label>erwerwe</label><button class="destroy"></button></div></li>
     let itemChecked = if item.Done then "true" else ""
-    li []
-       [ div [ attribute "className" "view" ]
-             [ input [  attribute "className" "toggle"
-                        attribute "type" "checkbox"
-                        attribute "checked" itemChecked
+    li [ attribute "class" (if item.Done then "completed" else "")]
+       [ div [ attribute "class" "view" ]
+             [ input [  property "className" "toggle"
+                        property "type" "checkbox"
+                        property "checked" itemChecked
                         onMouseClick (fun e -> handler (ToggleItem item)) ]
                label [] [ text item.Name ]
-               button [ attribute "className" "destroy"
+               button [ attribute "class" "destroy"
                         onMouseClick (fun e -> handler (Destroy item)) ] [] ]]
      |> (fun i -> printfn "%A" i; i)
 
-let itemList handler items =
-    ul [ attribute "className" "todo-list" ]
-       (items |> List.map (listItem handler))
+let itemList handler items activeFilter =
+    let filterItems i =
+        match activeFilter with
+        | All -> true
+        | Completed -> i.Done
+        | Active -> not i.Done
 
-let todoMain items handler =
+    ul [attribute "class" "todo-list" ]
+       (items |> List.filter filterItems |> List.map (listItem handler))
+
+let todoMain model handler =
+    let items = model.Items
     let allChecked = items |> List.exists (fun i -> not i.Done)
-    section [   attribute "className" "main"
-                attribute "style" "display: block;" ]
-            [   input [ attribute "className" "toggle-all"
-                        attribute "type" "checkbox"
-                        attribute "checked" (if not allChecked then "true" else "")
+    section [  attribute "class" "main"
+               property "style" "display: block;" ]
+            [   input [ property "id" "toggle-all"
+                        attribute "class" "toggle-all"
+                        property "type" "checkbox"
+                        property "checked" (if not allChecked then "true" else "")
                         onMouseClick (fun e ->
                                     if allChecked
                                     then handler CheckAll
                                     else handler UnCheckAll) ]
                 label [ attribute "for" "toggle-all" ]
                       [ text "Mark all as complete" ]
-                (itemList handler items) ]
+                (itemList handler items model.Filter) ]
 
 let todoView m handler =
     section
-        [attribute "className" "todoapp"]
-        [
-            (todoHeader m.Input handler)
-            (todoMain m.Items handler)
-        ]
+        [attribute "class" "todoapp"]
+        ((todoHeader m.Input handler)::(if m.Items = []
+                then []
+                else [  (todoMain m handler)
+                        (todoFooter m handler) ] ))
 
 let view m handler =
     div
@@ -183,6 +236,8 @@ let updateTodo msg model =
         let items' =
             model.Items |> List.map (fun i' -> if i' <> i then i' else {i with Done = not i.Done})
         {model with Items = items'}
+    | SetActiveFilter f -> { model with Filter = f }
+    | ClearCompleted -> { model with Items = model.Items |> List.filter (fun i -> not i.Done)}
 
 
 let counterUpdate msg model =
@@ -201,4 +256,4 @@ let update msg model =
     printfn "New model %A" model'
     model'
 
-start {Model = {Counter = 0; Todo = {Items = [ { Name = "Yolo"; Done = false; Id = 0}]; Input = ""}}; View = view; Update = update}
+start {Model = {Counter = 0; Todo = {Filter = All; Items = [ { Name = "Yolo"; Done = false; Id = 0}]; Input = ""}}; View = view; Update = update}

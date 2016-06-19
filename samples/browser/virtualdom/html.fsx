@@ -27,7 +27,8 @@ module Types =
     type Attribute =
     | EventHandlerBinding of EventHandlerBinding
     | Style of Style
-    | KeyValue of KeyValue
+    | Property of KeyValue
+    | Attribute of KeyValue
 
     type Element = string * Attribute list
     /// A Node in Html have the following forms
@@ -180,7 +181,8 @@ module Tags =
 
 [<AutoOpen>]
 module Attributes =
-    let attribute key value = Attribute.KeyValue (key,value)
+    let attribute key value = Attribute.Attribute (key,value)
+    let property key value = Attribute.Property (key,value)
 
 [<AutoOpen>]
 module Events =
