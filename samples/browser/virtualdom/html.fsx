@@ -287,6 +287,12 @@ module Events =
     let onVrdisplayPresentChange = onEvent "onvrdisplaypresentchange"
     let onWaiting = onEvent "onwaiting"
 
+    //	FocusEvent	DOM L3	An element has lost focus (does not bubble).
+    //  Unimplemented	FocusEvent	DOM L3	An element has received focus (use focus or focusininstead).
+    //  Unimplemented	FocusEvent	DOM L3	An element has lost focus (use blur or focusoutinstead).
+    //	FocusEvent	DOM L3	An element has received focus (does not bubble).
+    let onBlur = onEvent "onblur"
+    let onFocus = onEvent "onfocus"
 
 // List of events from: https://developer.mozilla.org/en-US/docs/Web/Events
 //animationend	AnimationEvent	CSS Animations	A CSS animation has completed.

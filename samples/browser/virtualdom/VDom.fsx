@@ -60,7 +60,6 @@ module VDom =
             | Some x -> x::renderedOthers
             | _ -> renderedOthers
             |> createObj
-            |> (fun x -> printfn "Attribtues: "; printfn "%A" x; x)
 
         match node with
         | Element((tag,attrs), nodes) ->
