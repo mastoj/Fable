@@ -1,5 +1,6 @@
 #load "html.fsx"
 #load "App.fsx"
+#load "VDom.fsx"
 #r "node_modules/fable-core/Fable.Core.dll"
 open Fable.Core
 open Fable.Import
@@ -7,6 +8,7 @@ open Fable.Import.Browser
 
 open App
 open Html
+open VDom
 
 // Storage
 module Storage =
@@ -202,11 +204,20 @@ let todoUpdate msg model =
 open Storage
 let initList = fetch<Item>() |> List.ofArray
 let initModel = {Filter = All; Items = initList; Input = ""}
+
+let renderer =
+    {
+        Render = VDom.render
+        Diff = VDom.diff
+        Patch = VDom.patch
+        CreateElement = VDom.createElement
+    }
+
 let app =
     createApp {Model = initModel; View = todoView; Update = todoUpdate}
     |> (withSubscriber "storagesub" (function (ModelChanged (newModel,old)) -> save (newModel.Items |> Array.ofList) | _ -> ()))
     |> (withSubscriber "modellogger" (printfn "%A"))
-app |> start
+app |> start renderer
 
 //type Model =
 //    {

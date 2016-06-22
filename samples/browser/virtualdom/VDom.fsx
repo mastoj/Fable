@@ -24,8 +24,7 @@ let join sep strs = failwith "JS only"
 module VDom =
     open Html
 
-    let rec render node =
-//        let renderMouseEventHandler (eventType, handler) = eventType, (handler :> obj)
+    let createTree tag attributes children =
         let renderEventHandler (eventType, handler) = eventType, handler
 
         let renderEventBinding binding =
@@ -61,14 +60,17 @@ module VDom =
             | _ -> renderedOthers
             |> createObj
 
-        match node with
-        | Element((tag,attrs), nodes) ->
-            let hAttrs = attrs |> toAttrs
-            let children = nodes |> List.map render |> List.toArray
-            h(tag, hAttrs, children)
+        let hAttrs = attributes |> toAttrs
+        let childrenArr = children |> List.toArray
+        h(tag, hAttrs, childrenArr)
 
-        | VoidElement (tag, attrs) ->
-            let hAttrs = attrs |> toAttrs
-            h(tag, hAttrs, [||])
+    let diff tree1 tree2 = diff(tree1, tree2)
+    let patch node patches = patch(node, patches)
+    let createElement e = createElement(e)
+
+    let rec render node =
+        match node with
+        | Element((tag,attrs), nodes) -> createTree tag attrs (nodes |> List.map render)
+        | VoidElement (tag, attrs) -> createTree tag attrs []
         | Text str -> String str
         | WhiteSpace str -> String str

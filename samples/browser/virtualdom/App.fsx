@@ -1,11 +1,9 @@
 #load "html.fsx"
-#load "VDom.fsx"
 #load "MailboxProcessor.fs"
 #r "node_modules/fable-core/Fable.Core.dll"
 
 open Html
 open MailboxProcessor
-open VDom
 open Fable.Core
 open Fable.Import.Browser
 
@@ -58,10 +56,18 @@ module App =
         | RemoveSubscriber of string
         | Message of 'TMessage
 
-    let start app =
-        let createTree view model handler =
+    type Renderer =
+        {
+            Render: Html.Types.Node -> obj
+            Diff: obj -> obj -> obj
+            Patch: Fable.Import.Browser.Node -> obj -> Fable.Import.Browser.Node
+            CreateElement: obj -> Fable.Import.Browser.Node
+        }
+
+    let start renderer app =
+        let renderTree view model handler =
             view model handler
-            |> VDom.render
+            |> renderer.Render
 
         let startElem =
             match app.NodeSelector with
@@ -79,8 +85,8 @@ module App =
                 async {
                     match state.Node, state.CurrentTree with
                     | None,_ ->
-                        let tree = createTree state.AppState.View state.AppState.Model post
-                        let rootNode = createElement tree
+                        let tree = renderTree state.AppState.View state.AppState.Model post
+                        let rootNode = renderer.CreateElement tree
                         startElem.appendChild(rootNode) |> ignore
                         return! loop {state with CurrentTree = Some tree; Node = Some rootNode}
                     | Some rootNode, Some currentTree ->
@@ -89,10 +95,10 @@ module App =
                         | Message m ->
                             ActionReceived m |> (notifySubscribers state.Subscribers)
                             let (model', jsCalls) = state.AppState.Update m state.AppState.Model
-                            let tree = createTree state.AppState.View model' post
-                            let patches = diff(currentTree, tree)
+                            let tree = renderTree state.AppState.View model' post
+                            let patches = renderer.Diff currentTree tree
                             notifySubscribers state.Subscribers (ModelChanged (model', state.AppState.Model))
-                            patch(rootNode, patches) |> ignore
+                            renderer.Patch rootNode patches |> ignore
                             jsCalls |> List.iter (fun i -> i())
                             return! loop {state with AppState = {state.AppState with Model = model'}; CurrentTree = Some tree}
                         | _ -> return! loop state
