@@ -1,14 +1,13 @@
-#load "html.fsx"
-#load "App.fsx"
-#load "VDom.fsx"
+#load "Fable.Helpers.Virtualdom.fsx"
+#load "Fable.Import.Virtualdom.fsx"
 #r "node_modules/fable-core/Fable.Core.dll"
 open Fable.Core
 open Fable.Import
 open Fable.Import.Browser
 
-open App
-open Html
-open VDom
+open Fable.Helpers.Virtualdom.App
+open Fable.Helpers.Virtualdom.Html
+open Fable.Import.Virtualdom.Virtualdom
 
 // Storage
 module Storage =
@@ -100,7 +99,7 @@ let todoHeader model handler =
         [attribute "class" "header"]
         [   h1 [] [text "todos"]
             input [ attribute "class" "new-todo"
-                    property "placeholder" "What needs to be done?"
+                    property "placeholder" "What needs to be done??"
                     property "value" model
                     onKeydown (fun x ->
                         if x.code = "Enter"
@@ -207,10 +206,10 @@ let initModel = {Filter = All; Items = initList; Input = ""}
 
 let renderer =
     {
-        Render = VDom.render
-        Diff = VDom.diff
-        Patch = VDom.patch
-        CreateElement = VDom.createElement
+        Render = render
+        Diff = diff
+        Patch = patch
+        CreateElement = createElement
     }
 
 let app =

@@ -1,29 +1,23 @@
 #r "node_modules/fable-core/Fable.Core.dll"
-#load "html.fsx"
+#load "Fable.Helpers.Virtualdom.fsx"
 
 open Fable.Core
-//open Fable.Import.Browser
-
 open Fable.Import.Browser
+open Fable.Helpers.Virtualdom.Html
+
 let failwithjs() = failwith "JS only"
 let [<Import("default","virtual-dom/h")>] h(arg1: string, arg2: obj, arg3: obj[]): obj = failwithjs()
 let [<Import("default","virtual-dom/diff")>] diff(arg1:obj, arg2:obj): obj = failwithjs()
-let [<Import("default","virtual-dom/patch")>] patch(arg1:obj, arg2:obj): Node = failwithjs()
-let [<Import("default","virtual-dom/create-element")>] createElement:obj -> Node = failwithjs()
+let [<Import("default","virtual-dom/patch")>] patch(arg1:obj, arg2:obj): Fable.Import.Browser.Node = failwithjs()
+let [<Import("default","virtual-dom/create-element")>] createElement:obj -> Fable.Import.Browser.Node = failwithjs()
 
 [<Emit("String($0)")>]
 let String i :obj= failwith "JS only"
 
-[<Emit("x + y")>]
-let something x y = failwith "JS only"
-
 [<Emit("$1.join($0)")>]
 let join sep strs = failwith "JS only"
 
-
-module VDom =
-    open Html
-
+module Virtualdom =
     let createTree tag attributes children =
         let renderEventHandler (eventType, handler) = eventType, handler
 
@@ -32,14 +26,14 @@ module VDom =
             | MouseEventHandler (eventType, handler) -> (eventType, handler :> obj)//renderMouseEventHandler mh
             | KeyboardEventHandler (eventType, handler) -> (eventType, handler :> obj)
             | EventHandler (eventType, handler) -> (eventType, handler :> obj)
-            | x ->
-                printfn "Missing renderer for handler: %A" x
-                raise (exn "Missing renderer for handler")
             |> renderEventHandler
 
         let renderAttributes attributes =
             attributes
-            |> List.map (fun (Attribute.Attribute (k,v)) -> k,(v :> obj))
+            |> List.map (function
+                            | Attribute.Attribute (k,v) -> Some (k,(v :> obj))
+                            | _ -> None)
+            |> List.choose id
             |> (function
                 | [] -> None
                 | p -> Some ("attributes", (p |> createObj)))
@@ -51,7 +45,14 @@ module VDom =
                 others
                 |> List.map (function
                         | EventHandlerBinding binding -> binding |> renderEventBinding
-                        | Style style -> "style", ((style |> Array.ofList |> Array.map (fun (k,v) -> k + ":" + v) |> join ";") :> obj)
+                        | Style style ->
+                            let v =
+                                style
+                                |> Array.ofList
+                                |> Array.map (fun (k,v) -> k + ":" + v)
+                                |> join ";"
+                                :> obj
+                            "style", v //((style |> Array.ofList |> Array.map (fun (k,v) -> k + ":" + v) |> join ";") :> obj)
                         | Property (key, value) -> key,(value :> obj)
                         | Attribute _ -> failwith "Should not happen"
                     )
