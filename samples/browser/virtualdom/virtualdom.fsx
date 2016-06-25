@@ -1,6 +1,33 @@
+(**
+ - title: D3 world tour
+ - tagline: Looping through countries of the world
+ - app-style: height:500px; width:500px; margin:10px auto 10px auto;
+ - require-paths: `'d3':'https://d3js.org/d3.v3.min','queue': 'https://d3js.org/queue.v1.min','topojson': 'https://d3js.org/topojson.v1.min' `
+ - intro: This demo is a Fable port of [Mike Bostock's World Tour](http://bl.ocks.org/mbostock/4183330)
+   D3 demo. It uses the D3 library to create a visualization that loops through all countries of
+   the world and shows them on the globe one by one.
+   You can find the [full source code on GitHub](https://github.com/fsprojects/Fable/blob/master/samples/browser/ap/ap.fsx).
+
+   On the technical side, the demo shows some of the more interesting aspects of
+   calling JavaScript libraries from Fable. You'll learn how to define mappings for
+   imported scripts, how to pass lambdas to JS code and the `?` operator.
+*)
+(*** hide ***)
 #load "Fable.Helpers.Virtualdom.fsx"
 #load "Fable.Import.Virtualdom.fsx"
 #r "node_modules/fable-core/Fable.Core.dll"
+(**
+Simple couter example
+---------------------
+
+The first application sample using the said architecture is a simple counter.
+
+*)
+
+(**
+    (*** raw ***)
+    <div id="thisisraw">This is raw</div>
+*)
 open Fable.Core
 open Fable.Import
 open Fable.Import.Browser

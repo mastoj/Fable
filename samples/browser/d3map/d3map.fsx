@@ -6,7 +6,7 @@
  - intro: This demo is a Fable port of [Mike Bostock's World Tour](http://bl.ocks.org/mbostock/4183330)
    D3 demo. It uses the D3 library to create a visualization that loops through all countries of
    the world and shows them on the globe one by one.
-   You can find the [full source code on GitHub](https://github.com/fsprojects/Fable/blob/master/samples/browser/d3map/d3map.fsx).
+   You can find the [full source code on GitHub](https://github.com/fsprojects/Fable/blob/master/samples/browser/ap/ap.fsx).
 
    On the technical side, the demo shows some of the more interesting aspects of
    calling JavaScript libraries from Fable. You'll learn how to define mappings for
@@ -87,7 +87,7 @@ let path =
     .projection(unbox<D3.Geo.Transform> projection)
     .context(ctx)
 
-let title = D3.Globals.select(".country-name")
+let title = D3.Globals.select(".")
 (**
 Finally, the `title` value is the HTML element in the middle of the globe that shows the
 current country name. This is just an ordinary HTML element and we will set its body text
