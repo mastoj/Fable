@@ -4,6 +4,7 @@
 open Fable.Core
 open Fable.Import.Browser
 open Fable.Helpers.Virtualdom.Html
+open Fable.Helpers.Virtualdom.App
 
 let failwithjs() = failwith "JS only"
 let [<Import("default","virtual-dom/h")>] h(arg1: string, arg2: obj, arg3: obj[]): obj = failwithjs()
@@ -75,3 +76,11 @@ module Virtualdom =
         | VoidElement (tag, attrs) -> createTree tag attrs []
         | Text str -> String str
         | WhiteSpace str -> String str
+
+    let renderer =
+        {
+            Render = render
+            Diff = diff
+            Patch = patch
+            CreateElement = createElement
+        }

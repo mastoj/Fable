@@ -293,7 +293,7 @@ module App =
     type AppState<'TModel, 'TMessage> = {
             Model: 'TModel
             View: 'TModel -> ('TMessage -> unit) -> Html.Types.Node
-            Update: 'TMessage -> 'TModel -> ('TModel * ((unit -> unit) list)) }
+            Update: 'TModel -> 'TMessage -> ('TModel * ((unit -> unit) list)) }
 
 
     type AppEvents<'TMessage, 'TModel> =
@@ -366,9 +366,9 @@ module App =
                     | Some rootNode, Some currentTree ->
                         let! message = inbox.Receive()
                         match message with
-                        | Message m ->
-                            ActionReceived m |> (notifySubscribers state.Subscribers)
-                            let (model', jsCalls) = state.AppState.Update m state.AppState.Model
+                        | Message msg ->
+                            ActionReceived msg |> (notifySubscribers state.Subscribers)
+                            let (model', jsCalls) = state.AppState.Update state.AppState.Model msg
                             let tree = renderTree state.AppState.View model' post
                             let patches = renderer.Diff currentTree tree
                             notifySubscribers state.Subscribers (ModelChanged (model', state.AppState.Model))
