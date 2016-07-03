@@ -38,7 +38,7 @@ module Html =
             | KeyboardEventHandler of KeyboardEventHandler
             | EventHandler of EventHandler
 
-        type Style = (string*string) list
+        type Style = (string*string) []
 
         type KeyValue = string*string
 
@@ -48,12 +48,12 @@ module Html =
         | Property of KeyValue
         | Attribute of KeyValue
 
-        type Element = string * Attribute list
+        type Element = string * Attribute []
         /// A Node in Html have the following forms
-        type VoidElement = string * Attribute list
+        type VoidElement = string * Attribute []
         type Node =
         /// A regular html element that can contain a list of other nodes
-        | Element of Element * Node list
+        | Element of Element * Node []
         /// A void element is one that can't have content, like link, br, hr, meta
         /// See: https://dev.w3.org/html5/html-author/#void
         | VoidElement of VoidElement
@@ -306,7 +306,7 @@ module App =
     type AppState<'TModel, 'TMessage> = {
             Model: 'TModel
             View: ('TMessage -> unit) -> 'TModel -> Html.Types.Node
-            Update: 'TModel -> 'TMessage -> ('TModel * ((unit -> unit) list)) }
+            Update: 'TModel -> 'TMessage -> ('TModel * ((unit -> unit) [])) }
 
 
     type AppEvents<'TMessage, 'TModel> =
@@ -386,7 +386,7 @@ module App =
                             let patches = renderer.Diff currentTree tree
                             notifySubscribers state.Subscribers (ModelChanged (model', state.AppState.Model))
                             renderer.Patch rootNode patches |> ignore
-                            jsCalls |> List.iter (fun i -> i())
+                            jsCalls |> Array.iter (fun i -> i())
                             return! loop {state with AppState = {state.AppState with Model = model'}; CurrentTree = Some tree}
                         | _ -> return! loop state
                     | _ -> failwith "Shouldn't happen"
@@ -405,25 +405,25 @@ let createTree tag attributes children =
 
     let renderAttributes attributes =
         attributes
-        |> List.map (function
+        |> Array.map (function
                         | Attribute.Attribute (k,v) -> Some (k ==> v)
                         | _ -> None)
-        |> List.choose id
+        |> Array.choose id
         |> (function
-            | [] -> None
-            | p -> Some ("attributes" ==> (p |> createObj)))
+                | [||] -> None
+                | p -> Some ("attributes" ==> (p |> createObj)))
 
     let toAttrs attrs =
-        let (attributes, others) = attrs |> List.partition (function Attribute _ -> true | _ -> false)
+        let (attributes, others) = attrs |> Array.partition (function Attribute _ -> true | _ -> false)
         let renderedAttributes = attributes |> renderAttributes
         let renderedOthers =
             others
-            |> List.map (function
+            |> Array.map (function
                     | EventHandlerBinding binding -> binding |> renderEventBinding
                     | Style style ->
                         let styleObj =
                             style
-                            |> List.map (fun (k,v) -> k ==> v)
+                            |> Array.map (fun (k,v) -> k ==> v)
                             |> createObj
 
                         "style" ==> styleObj
@@ -431,18 +431,17 @@ let createTree tag attributes children =
                     | Attribute _ -> failwith "Should not happen"
                 )
         match renderedAttributes with
-        | Some x -> x::renderedOthers
+        | Some x -> Array.append [|x|] renderedOthers
         | _ -> renderedOthers
         |> createObj
 
     let hAttrs = attributes |> toAttrs
-    let childrenArr = children |> List.toArray
-    h(tag, hAttrs, childrenArr)
+    h(tag, hAttrs, children)
 
 let rec render node =
     match node with
-    | Element((tag,attrs), nodes) -> createTree tag attrs (nodes |> List.map render)
-    | VoidElement (tag, attrs) -> createTree tag attrs []
+    | Element((tag,attrs), nodes) -> createTree tag attrs (nodes |> Array.map render)
+    | VoidElement (tag, attrs) -> createTree tag attrs [||]
     | Text str -> box(string str)
     | WhiteSpace str -> box(string str)
 
