@@ -409,10 +409,18 @@ let createTree tag attributes children =
                         | Attribute.Attribute (k,v) -> Some (k ==> v)
                         | _ -> None)
         |> Array.choose id
-        |> (function
-                | [||] -> None
-                | p -> Some ("attributes" ==> (p |> createObj)))
+        |> (fun x -> if x.Length = 0 then None else Some ("attributes" ==> (x |> createObj)))
 
+
+//        let x = 
+//            attributes
+//            |> Array.map (function
+//                            | Attribute.Attribute (k,v) -> Some (k ==> v)
+//                            | _ -> None)
+//            |> Array.choose id
+//            |> (fun x -> if x.Length = 0 then None else Some ("attributes" ==> (p |> createObj)))
+//        x
+//
     let toAttrs attrs =
         let (attributes, others) = attrs |> Array.partition (function Attribute _ -> true | _ -> false)
         let renderedAttributes = attributes |> renderAttributes
