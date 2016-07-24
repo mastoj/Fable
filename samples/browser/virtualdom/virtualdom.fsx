@@ -55,7 +55,7 @@ type CounterAction =
     | Decrement of int
     | Increment of int
 
-let fakeAjaxCall model h = 
+let fakeAjaxCall model (h:CounterAction->unit) = 
     let message = if model < 30 then Increment 10 else Decrement 5 
     if model > 30 && model < 60 then () 
     else window.setTimeout((fun _ -> h (message)), 2000) |> ignore
@@ -136,10 +136,12 @@ let nestedUpdate model action =
     | Reset -> {Top = 0; Bottom = 0},[],[]
     | Top ca -> 
         let (res, jsCalls, actions) = (counterUpdate model.Top ca)
-        {model with Top = res},jsCalls,[]
+        let actions' = actions |> List.map (fun f -> (fun x -> f (fun a -> x (Top a))))
+        {model with Top = res},jsCalls,actions'
     | Bottom ca -> 
         let (res, jsCalls, actions) = (counterUpdate model.Bottom ca)
-        {model with Bottom = res},jsCalls,[]
+        let actions' = actions |> List.map (fun f -> (fun x -> f (fun a -> x (Bottom a))))
+        {model with Bottom = res},jsCalls,actions'
 
 let nestedView model = 
     div []
