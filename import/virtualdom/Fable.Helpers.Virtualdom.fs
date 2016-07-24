@@ -64,6 +64,35 @@ module Html =
         | WhiteSpace of string
         | Svg of Element<'TMessage> * Node<'TMessage> list
 
+    let mapEventHandler<'T1,'T2> (mapping:('T1 -> 'T2)) (eventHandler:EventHandlerBinding<'T1>) =
+         match eventHandler with
+         | MouseEventHandler(e,f) -> MouseEventHandler(e, f >> mapping) 
+         | KeyboardEventHandler(e,f) -> KeyboardEventHandler(e, f >> mapping) 
+         | EventHandler(e,f) -> EventHandler(e, f >> mapping) 
+
+    let mapAttributes<'T1,'T2> (mapping:('T1 -> 'T2)) (attribute:Attribute<'T1>) =
+        match attribute with
+        | EventHandlerBinding(eb) -> EventHandlerBinding(mapEventHandler mapping eb)
+        | Style s -> Style s
+        | Property kv -> Property kv
+        | Attribute kv -> Attribute kv 
+
+    let mapElem<'T1,'T2> (mapping:('T1 -> 'T2)) (node:Element<'T1>) =
+        let (tag, attrs) = node
+        (tag, attrs |> List.map (mapAttributes mapping))
+
+    let mapVoidElem<'T1,'T2> (mapping:('T1 -> 'T2)) (node:Element<'T1>) =
+        let (tag, attrs) = node
+        (tag, attrs |> List.map (mapAttributes mapping))
+
+    let rec map<'T1,'T2> (mapping:('T1 -> 'T2)) (node:Node<'T1>) = 
+        match node with
+        | Element(e,ns) -> Element(mapElem mapping e, ns |> List.map (map mapping))
+        | VoidElement(ve) -> VoidElement(mapVoidElem mapping ve)
+        | Text(s) -> Text s 
+        | WhiteSpace(ws) -> WhiteSpace ws   
+        | Svg(e,ns) -> Element(mapElem mapping e, ns |> List.map (map mapping))
+
     [<AutoOpen>]
     module Tags =
         let inline elem tagName attrs children = Element((tagName, attrs), children)

@@ -9,8 +9,8 @@
 *)
 (*** hide ***)
 #r "node_modules/fable-core/Fable.Core.dll"
-#load "node_modules/fable-import-virtualdom/Fable.Helpers.Virtualdom.fs"
-//#load "../../../import/virtualdom/Fable.Helpers.Virtualdom.fs"
+//#load "node_modules/fable-import-virtualdom/Fable.Helpers.Virtualdom.fs"
+#load "../../../import/virtualdom/Fable.Helpers.Virtualdom.fs"
 (**
 ##Architecture overview
 
@@ -122,6 +122,37 @@ let counterApp =
     |> withStartNode "#counter"
 
 counterApp |> start renderer
+
+
+type NestedModel = { Top: int; Bottom: int}
+
+type NestedAction = 
+    | Reset
+    | Top of CounterAction
+    | Bottom of CounterAction
+
+let nestedUpdate model action = 
+    match action with
+    | Reset -> {Top = 0; Bottom = 0},[],[]
+    | Top ca -> 
+        let (res, jsCalls, actions) = (counterUpdate model.Top ca)
+        {model with Top = res},jsCalls,[]
+    | Bottom ca -> 
+        let (res, jsCalls, actions) = (counterUpdate model.Bottom ca)
+        {model with Bottom = res},jsCalls,[]
+
+let nestedView model = 
+    div []
+        [
+            Html.map Top (counterView model.Top)
+            Html.map Bottom (counterView model.Bottom)
+        ]
+
+let nestedCounterApp =
+    createApp {Model = {Top = 0; Bottom = 0}; View = nestedView; Update = nestedUpdate}
+    |> withStartNode "#nested-counter"
+
+nestedCounterApp |> start renderer
 
 (**
 The dsl has been separated from the actual rendering of the dsl, to allow for
