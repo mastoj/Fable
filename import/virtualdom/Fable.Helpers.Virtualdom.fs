@@ -347,10 +347,16 @@ open Fable.Import.Browser
 
 [<AutoOpen>]
 module App =
+    type Action<'TMessage> = ('TMessage -> unit) -> unit
+
+    let mapAction<'T1,'T2> (mapping:'T1 -> 'T2) (action:Action<'T1>) : Action<'T2> = 
+        fun x -> action (mapping >> x)  
+
     type AppState<'TModel, 'TMessage> = {
             Model: 'TModel
             View: 'TModel -> Html.Types.Node<'TMessage>
-            Update: 'TModel -> 'TMessage -> ('TModel * ((unit -> unit) list) * (('TMessage -> unit) -> unit) list) }
+            Update: 'TModel -> 'TMessage -> ('TModel * Action<'TMessage> option)
+            }
 
 
     type AppEvents<'TMessage, 'TModel> =
@@ -368,7 +374,7 @@ module App =
         {
             AppState: AppState<'TModel, 'TMessage>
             Init : (('TMessage -> unit) -> unit) option
-            JsCalls: (unit -> unit) list
+            Actions: Action<'TMessage> list
             Node: Node option
             CurrentTree: obj option
             Subscribers: Map<string, Subscriber<'TMessage, 'TModel>>
@@ -397,7 +403,7 @@ module App =
         {
             AppState = appState
             Init = None
-            JsCalls = []
+            Actions = []
             Node = None
             CurrentTree = None
             Subscribers = Map.empty
@@ -460,7 +466,11 @@ module App =
                         match message with
                         | Message msg ->
                             ActionReceived msg |> (notifySubscribers state.Subscribers)
-                            let (model', jsCalls, msgs) = state.AppState.Update state.AppState.Model msg
+                            let (model', actionOpt) = state.AppState.Update state.AppState.Model msg
+                            let actions = 
+                                match actionOpt with
+                                | Some a -> state.Actions @ [a]
+                                | None -> state.Actions
 
                             let renderState =
                                 match state.RenderState with
@@ -468,12 +478,11 @@ module App =
                                     scheduler.Post(PingIn(1000./60., (fun() -> inbox.Post(Draw))))
                                     InProgress
                                 | InProgress -> InProgress
-                            msgs |> List.iter (fun m -> m post)
                             return! loop {
                                 state with 
                                     AppState = { state.AppState with Model = model' }
                                     RenderState = renderState
-                                    JsCalls = state.JsCalls @ jsCalls }
+                                    Actions = actions }
                         | Draw -> 
                             match state.RenderState with
                             | InProgress ->
@@ -481,15 +490,14 @@ module App =
 
                                 let model = state.AppState.Model
 
-                                let jsCalls = state.JsCalls
                                 let tree = renderTree state.AppState.View post model
                                 let patches = renderer.Diff currentTree tree
                                 renderer.Patch rootNode patches |> ignore
-                                jsCalls |> List.iter (fun i -> i())
+                                state.Actions |> List.iter (fun i -> i post)
 
                                 (ModelChanged (model, state.AppState.Model)) |> notifySubscribers state.Subscribers
 
-                                return! loop {state with RenderState = NoRequest; CurrentTree = Some tree; JsCalls = []}
+                                return! loop {state with RenderState = NoRequest; CurrentTree = Some tree; Actions = []}
                             | NoRequest -> raise (exn "Shouldn't happen")
                         | _ -> return! loop state
                     | _ -> failwith "Shouldn't happen"

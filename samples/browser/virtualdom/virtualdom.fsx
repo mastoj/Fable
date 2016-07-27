@@ -64,7 +64,7 @@ let counterUpdate model action =
     match action with
     | Decrement x -> model - x
     | Increment x -> model + x
-    |> (fun m -> m,[],[fakeAjaxCall model])
+    |> (fun m -> m, (fakeAjaxCall model) |> Some) 
 
 (**
 The counter can be incremented or decremented in step of `x`. If you look closely
@@ -121,8 +121,14 @@ let counterApp =
     |> withInit (fakeAjaxCall initCounter) 
     |> withStartNode "#counter"
 
-counterApp |> start renderer
+//counterApp |> start renderer
 
+let bindOpt<'T1,'T2> (m:'T1 -> 'T2 option) (o: 'T1 Option) =
+    match o with
+    | Some x -> m x
+    | None -> None
+
+let mapOpt<'T1,'T2> (m:'T1 -> 'T2) (o: 'T1 Option) = (bindOpt (m >> Some) o)
 
 type NestedModel = { Top: int; Bottom: int}
 
@@ -132,16 +138,21 @@ type NestedAction =
     | Bottom of CounterAction
 
 let nestedUpdate model action = 
+    let mapCounterAction tag action = 
+        match action with
+        | Some a -> (fun x -> a (tag >> x)) |> Some 
+        | None -> None
+
     match action with
-    | Reset -> {Top = 0; Bottom = 0},[],[]
+    | Reset -> {Top = 0; Bottom = 0},None
     | Top ca -> 
-        let (res, jsCalls, actions) = (counterUpdate model.Top ca)
-        let actions' = actions |> List.map (fun f -> (fun x -> f (fun a -> x (Top a))))
-        {model with Top = res},jsCalls,actions'
+        let (res, action) = (counterUpdate model.Top ca)
+        let action' = mapOpt (App.mapAction Top) action
+        {model with Top = res},action'
     | Bottom ca -> 
-        let (res, jsCalls, actions) = (counterUpdate model.Bottom ca)
-        let actions' = actions |> List.map (fun f -> (fun x -> f (fun a -> x (Bottom a))))
-        {model with Bottom = res},jsCalls,actions'
+        let (res, action) = (counterUpdate model.Bottom ca)
+        let action' = mapOpt (App.mapAction Bottom) action
+        {model with Bottom = res},action'
 
 let nestedView model = 
     div []
@@ -287,12 +298,11 @@ let todoUpdate model msg =
         | SaveItem (i,str) ->
             updateItem { i with Name = str; IsEditing = false} model
 
-    let jsCalls =
+    let jsCall =
         match msg with
-        | EditItem i -> [fun () ->
-            document.getElementById("item-" + (i.Id.ToString())).focus()]
-        | _ -> []
-    model',jsCalls,[]
+        | EditItem i -> Some <| fun x -> document.getElementById("item-" + (i.Id.ToString())).focus()
+        | _ -> None
+    model', jsCall
 
 (**
 It might seem like a lot of code, but we need to handle all actions and respond
