@@ -348,14 +348,18 @@ open Fable.Import.Browser
 [<AutoOpen>]
 module App =
     type Action<'TMessage> = ('TMessage -> unit) -> unit
+    type Producer<'TMessage> = ('TMessage -> unit) -> unit
 
     let mapAction<'T1,'T2> (mapping:'T1 -> 'T2) (action:Action<'T1>) : Action<'T2> = 
         fun x -> action (mapping >> x)  
 
+    let mapActions m = List.map (mapAction m)
+    let action a = [a]
+
     type AppState<'TModel, 'TMessage> = {
             Model: 'TModel
             View: 'TModel -> Html.Types.Node<'TMessage>
-            Update: 'TModel -> 'TMessage -> ('TModel * Action<'TMessage> option)
+            Update: 'TModel -> 'TMessage -> ('TModel * Action<'TMessage> list)
             }
 
 
@@ -375,6 +379,7 @@ module App =
             AppState: AppState<'TModel, 'TMessage>
             Init : (('TMessage -> unit) -> unit) option
             Actions: Action<'TMessage> list
+            Producers: Producer<'TMessage> list
             Node: Node option
             CurrentTree: obj option
             Subscribers: Map<string, Subscriber<'TMessage, 'TModel>>
@@ -404,6 +409,7 @@ module App =
             AppState = appState
             Init = None
             Actions = []
+            Producers = []
             Node = None
             CurrentTree = None
             Subscribers = Map.empty
@@ -416,6 +422,8 @@ module App =
     let withSubscriber subscriberId subscriber app =
         let subsribers = app.Subscribers |> Map.add subscriberId subscriber
         { app with Subscribers = subsribers }
+    let withProducer p app = 
+        {app with Producers = p::app.Producers}
 
     let createScheduler() = 
         MailboxProcessor.Start(fun inbox ->
@@ -449,6 +457,8 @@ module App =
             let notifySubscribers subs model =
                 subs |> Map.iter (fun key handler -> handler model)
 
+            app.Producers |> List.iter (fun p -> p post)
+
             let rec loop state =
                 async {
                     match state.Node, state.CurrentTree with
@@ -466,11 +476,7 @@ module App =
                         match message with
                         | Message msg ->
                             ActionReceived msg |> (notifySubscribers state.Subscribers)
-                            let (model', actionOpt) = state.AppState.Update state.AppState.Model msg
-                            let actions = 
-                                match actionOpt with
-                                | Some a -> state.Actions @ [a]
-                                | None -> state.Actions
+                            let (model', actions) = state.AppState.Update state.AppState.Model msg
 
                             let renderState =
                                 match state.RenderState with
@@ -482,7 +488,7 @@ module App =
                                 state with 
                                     AppState = { state.AppState with Model = model' }
                                     RenderState = renderState
-                                    Actions = actions }
+                                    Actions = state.Actions @ actions }
                         | Draw -> 
                             match state.RenderState with
                             | InProgress ->

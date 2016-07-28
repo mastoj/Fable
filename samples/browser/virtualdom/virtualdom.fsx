@@ -60,11 +60,11 @@ let fakeAjaxCall model (h:CounterAction->unit) =
     if model > 30 && model < 60 then () 
     else window.setTimeout((fun _ -> h (message)), 2000) |> ignore
 
-let counterUpdate model action =
-    match action with
+let counterUpdate model command =
+    match command with
     | Decrement x -> model - x
     | Increment x -> model + x
-    |> (fun m -> m, (fakeAjaxCall model) |> Some) 
+    |> (fun m -> m, (fakeAjaxCall model) |> action) 
 
 (**
 The counter can be incremented or decremented in step of `x`. If you look closely
@@ -144,14 +144,14 @@ let nestedUpdate model action =
         | None -> None
 
     match action with
-    | Reset -> {Top = 0; Bottom = 0},None
+    | Reset -> {Top = 0; Bottom = 0},[]
     | Top ca -> 
         let (res, action) = (counterUpdate model.Top ca)
-        let action' = mapOpt (App.mapAction Top) action
+        let action' = App.mapActions Top action
         {model with Top = res},action'
     | Bottom ca -> 
         let (res, action) = (counterUpdate model.Bottom ca)
-        let action' = mapOpt (App.mapAction Bottom) action
+        let action' = App.mapActions Bottom action
         {model with Bottom = res},action'
 
 let nestedView model = 
@@ -165,7 +165,13 @@ let nestedCounterApp =
     createApp {Model = {Top = 0; Bottom = 0}; View = nestedView; Update = nestedUpdate}
     |> withStartNode "#nested-counter"
 
-nestedCounterApp |> start renderer
+
+let resetEveryTenth h =
+    window.setInterval((fun _ -> Reset |> h), 10000) |> ignore
+
+nestedCounterApp 
+|> withProducer resetEveryTenth
+|> start renderer
 
 (**
 The dsl has been separated from the actual rendering of the dsl, to allow for
@@ -300,8 +306,8 @@ let todoUpdate model msg =
 
     let jsCall =
         match msg with
-        | EditItem i -> Some <| fun x -> document.getElementById("item-" + (i.Id.ToString())).focus()
-        | _ -> None
+        | EditItem i -> action <| fun x -> document.getElementById("item-" + (i.Id.ToString())).focus()
+        | _ -> []
     model', jsCall
 
 (**
