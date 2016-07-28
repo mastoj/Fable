@@ -41,6 +41,9 @@ open Fable.Helpers.Virtualdom
 open Fable.Helpers.Virtualdom.App
 open Fable.Helpers.Virtualdom.Html
 
+Option.map (fun x -> "Hello") (Some 1)
+
+
 // model
 type Counter = int
 let initCounter = 0
@@ -123,12 +126,12 @@ let counterApp =
 
 //counterApp |> start renderer
 
-let bindOpt<'T1,'T2> (m:'T1 -> 'T2 option) (o: 'T1 Option) =
-    match o with
-    | Some x -> m x
-    | None -> None
+// let bindOpt<'T1,'T2> (m:'T1 -> 'T2 option) (o: 'T1 Option) =
+//     match o with
+//     | Some x -> m x
+//     | None -> None
 
-let mapOpt<'T1,'T2> (m:'T1 -> 'T2) (o: 'T1 Option) = (bindOpt (m >> Some) o)
+// let mapOpt<'T1,'T2> (m:'T1 -> 'T2) (o: 'T1 Option) = (bindOpt (m >> Some) o)
 
 type NestedModel = { Top: int; Bottom: int}
 
